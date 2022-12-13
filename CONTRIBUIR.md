@@ -20,6 +20,8 @@ Para contribuires para o projeto, segue os seguintes passos:
 
 #### Tipos de mudança para as mensagens de commit
 
+- `chore`: Para alterações que não justifiquem a utilização de outro tipo de commir.
+- `feat`: Adiciona uma nova funcionalidade.
 - `fix`: Corrige um bug.
 - `docs`: Adiciona ou corrige documentação (qualquer ficheiro _Markdown_).
 - `refactor`: Para mudanças na estrutura do código que não alteram o seu funcionamento.
