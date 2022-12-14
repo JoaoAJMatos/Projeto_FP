@@ -12,4 +12,11 @@
 #define __inline__ inline
 #endif // defined(__aarch64__)
 
+
+enum {
+    ERRO = -1,
+    OK = 0
+};
+
+
 #endif //PROJETO1_COMUM_H
