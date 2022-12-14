@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "../comum.h"
+#include "../comum.h"                           // Para a definição da constante __inline__
 
 #if defined(_WIN32) || defined(_WIN34)          // Windows
 #define SEPARADOR_DIRETORIO "\\"                // Separador de diretório para Windows
@@ -44,8 +44,17 @@
 #define APPEND_LEITURA "a+"                     // Modo de append e leitura          (abre o ficheiro para leitura e append)
 
 #define MAXIMO_NUMERO_ELEMENTOS_CAMINHO 200     // Número máximo de elementos que um caminho pode ter (subdiretórios)
+#define TAMANHO_MAXIMO_CAMINHO \
+(MAXIMO_NUMERO_ELEMENTOS_CAMINHO * 255)         // Tamanho máximo de um caminho
 
 typedef long long t_tamanho_ficheiro;
+
+
+typedef enum {                                  // CODIGOS DE ERRO PARA A CRIAÇÃO DE UM CAMINHO
+    CAMINHO_OK = 0,                             // O caminho foi criado com sucesso
+    LIMITE_ELEMENTOS_CAMINHO,                   // O caminho tem mais elementos do que o permitido
+    CAMINHO_NAO_EXISTE,                         // O caminho não existe
+} t_erro_fs;
 
 
 /* =========== ESTRUTURAS =========== */
@@ -54,6 +63,7 @@ typedef struct {
     char*  elementos[MAXIMO_NUMERO_ELEMENTOS_CAMINHO]; // Elementos do caminho
     char*  string_caminho;                             // String com o caminho
     char*  caminho_absoluto;                           // Caminho absoluto (caminho desde a raiz do disco)
+    int    erro;                                       // Indica se ocorreu um erro ao criar o caminho
 } t_caminho;
 
 
@@ -66,6 +76,7 @@ void caminho_destruir(t_caminho*);                        // Liberta a memória 
 __inline__ void caminho_mostrar(t_caminho*);              // Mostra o caminho na stdout
 __inline__ void caminho_mostrar_absoluto(t_caminho*);     // Mostra o caminho absoluto na stdout
 char* caminho_relativo_para_absoluto(const char*);        // Retorna o caminho absoluto para um determinado caminho
+int   caminho_obter_ultimo_erro(t_caminho*, int);         // Retorna o código de erro do caminho e mostra a mensagem de erro se a flag for 1
 int   caminho_relativo(const char*);                      // Retorna 1 se o caminho for relativo, 0 caso contrário
 
 
@@ -75,19 +86,20 @@ int   caminho_relativo(const char*);                      // Retorna 1 se o cami
 // Algumas das funções são antecedidas pelo atributo "unused" para evitar avisos de compilação
 // quando o código é compilado com o GCC em modo de otimização (-O2 ou superior)
 
-__attribute__((unused)) FILE* abrir_ficheiro_leitura(char* filename);            // Abre um ficheiro para leitura
-__attribute__((unused)) FILE* abrir_ficheiro_leitura_binaria(char* filename);    // Abre um ficheiro para leitura binária
-__attribute__((unused)) FILE* abrir_ficheiro_escrita(char* filename);            // Abre um ficheiro para escrita
-__attribute__((unused)) FILE* abrir_ficheiro_escrita_binaria(char* filename);    // Abre um ficheiro para escrita em modo binário
-__attribute__((unused)) FILE* abrir_ficheiro_append(char* filename);             // Abre um ficheiro para append
-__attribute__((unused)) FILE* abrir_ficheiro_append_binario(char* filename);     // Abre um ficheiro para append em modo binário
-FILE* abrir_ficheiro(char* filename, char* mode);                                // Abre um ficheiro com o modo especificado
-int   fechar_ficheiro(FILE* file);                                               // Fecha um ficheiro
+__attribute__((unused)) FILE* abrir_ficheiro_leitura(char*);            // Abre um ficheiro para leitura
+__attribute__((unused)) FILE* abrir_ficheiro_leitura_binaria(char*);    // Abre um ficheiro para leitura binária
+__attribute__((unused)) FILE* abrir_ficheiro_escrita(char*);            // Abre um ficheiro para escrita
+__attribute__((unused)) FILE* abrir_ficheiro_escrita_binaria(char*);    // Abre um ficheiro para escrita em modo binário
+__attribute__((unused)) FILE* abrir_ficheiro_append(char*);             // Abre um ficheiro para append
+__attribute__((unused)) FILE* abrir_ficheiro_append_binario(char*);     // Abre um ficheiro para append em modo binário
+FILE* abrir_ficheiro(char*, char*);                                     // Abre um ficheiro com o modo especificado
+int   fechar_ficheiro(FILE*);                                           // Fecha um ficheiro
 
 
 
 /* ======= UTILITÁRIOS FS ======= */
 int   ficheiro_existe(const char*);          // Retorna 1 se o ficheiro existir, 0 caso contrário
+int   caminho_existe(const char*);           // Retorna 1 se o caminho existir, 0 caso contrário
 int   criar_arvore_diretorios(const char*);  // Cria uma árvore de diretórios
 char* diretorio_atual();                     // Retorna o diretório atual
 char* extenssao_ficheiro(const char*);       // Retorna a extensão de um ficheiro
