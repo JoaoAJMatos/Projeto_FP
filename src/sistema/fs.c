@@ -60,6 +60,73 @@ t_caminho* caminho_criar(const char* raiz, ...) {
 
 
 /**
+ * @brief Cria um novo caminho a partir de uma string.
+ * @param string_caminho
+ * @return t_caminho*
+ */
+t_caminho* criar_caminho_a_partir_de_string(const char* string_caminho) {
+    t_caminho* caminho = malloc(sizeof(t_caminho));
+    caminho->string_caminho = malloc(TAMANHO_MAXIMO_CAMINHO);
+    strcpy(caminho->string_caminho, string_caminho);
+    caminho->caminho_absoluto = caminho_relativo_para_absoluto(string_caminho);
+
+    if (!caminho_existe(caminho->caminho_absoluto)) {
+        caminho->erro = CAMINHO_NAO_EXISTE;
+        return caminho;
+    }
+
+    caminho->erro = CAMINHO_OK;
+    return caminho;
+}
+
+
+/**
+ * @brief Liberta a memória alocada pelo caminho.
+ * @param caminho
+ */
+void caminho_destruir(t_caminho* caminho) {
+    free(caminho->string_caminho);
+    free(caminho->caminho_absoluto);
+    free(caminho);
+}
+
+
+__inline__ void caminho_mostrar(t_caminho* caminho) {
+    printf("%s", caminho->string_caminho);
+}
+
+__inline__ void caminho_mostrar_absoluto(t_caminho* caminho) {
+    printf("%s", caminho->caminho_absoluto);
+}
+
+
+/**
+ * @brief Devolve o último erro e mostra a mensagem de erro correspondente se a flag verbose estiver ativa
+ * @param caminho
+ * @return int
+ */
+int caminho_obter_erro(t_caminho* caminho, int verbose) {
+    if (verbose) {
+        switch (caminho->erro) {
+            case CAMINHO_OK:
+                printf("Caminho OK\n");
+                break;
+            case CAMINHO_NAO_EXISTE:
+                printf("Caminho não existe\n");
+                break;
+            case LIMITE_ELEMENTOS_CAMINHO:
+                printf("Limite de elementos do caminho excedido\n");
+                break;
+            default:
+                printf("Erro desconhecido\n");
+                break;
+        }
+    }
+    return caminho->erro;
+}
+
+
+/**
  * @brief Converte um caminho relativo para um caminho absoluto
  * @param caminho_relativo
  * @return char*
@@ -69,6 +136,31 @@ char* caminho_relativo_para_absoluto(const char* caminho_relativo) {
     realpath(caminho_relativo, caminho_absoluto);
     return caminho_absoluto;
 }
+
+
+
+/* ========================================================== */
+/* =                     I/O FICHEIROS                      = */
+/* ========================================================== */
+
+FILE* abrir_ficheiro(const char* caminho, char* modo) {
+    FILE* ficheiro = fopen(caminho, modo);
+    if (ficheiro == NULL) {
+        printf("Erro ao abrir o ficheiro %s\n", caminho);
+        return NULL;
+    }
+    return ficheiro;
+}
+
+int fechar_ficheiro(FILE* ficheiro) {
+    if (fclose(ficheiro) != 0) {
+        printf("Erro ao fechar o ficheiro\n");
+        return ERRO;
+    }
+    return OK;
+}
+
+
 
 
 
