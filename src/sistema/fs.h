@@ -76,9 +76,7 @@ void caminho_destruir(t_caminho*);                        // Liberta a memória 
 __inline__ void caminho_mostrar(t_caminho*);              // Mostra o caminho na stdout
 __inline__ void caminho_mostrar_absoluto(t_caminho*);     // Mostra o caminho absoluto na stdout
 char* caminho_relativo_para_absoluto(const char*);        // Retorna o caminho absoluto para um determinado caminho
-int   caminho_obter_ultimo_erro(t_caminho*, int);         // Retorna o código de erro do caminho e mostra a mensagem de erro se a flag for 1
-int   caminho_relativo(const char*);                      // Retorna 1 se o caminho for relativo, 0 caso contrário
-
+int   caminho_obter_erro(t_caminho*, int);                // Retorna o código de erro do caminho e mostra a mensagem de erro se a flag for 1
 
 
 /* ======= I/O FICHEIROS ======= */
@@ -86,14 +84,14 @@ int   caminho_relativo(const char*);                      // Retorna 1 se o cami
 // Algumas das funções são antecedidas pelo atributo "unused" para evitar avisos de compilação
 // quando o código é compilado com o GCC em modo de otimização (-O2 ou superior)
 
-__attribute__((unused)) FILE* abrir_ficheiro_leitura(char*);            // Abre um ficheiro para leitura
-__attribute__((unused)) FILE* abrir_ficheiro_leitura_binaria(char*);    // Abre um ficheiro para leitura binária
-__attribute__((unused)) FILE* abrir_ficheiro_escrita(char*);            // Abre um ficheiro para escrita
-__attribute__((unused)) FILE* abrir_ficheiro_escrita_binaria(char*);    // Abre um ficheiro para escrita em modo binário
-__attribute__((unused)) FILE* abrir_ficheiro_append(char*);             // Abre um ficheiro para append
-__attribute__((unused)) FILE* abrir_ficheiro_append_binario(char*);     // Abre um ficheiro para append em modo binário
-FILE* abrir_ficheiro(char*, char*);                                     // Abre um ficheiro com o modo especificado
-int   fechar_ficheiro(FILE*);                                           // Fecha um ficheiro
+__attribute__((unused)) FILE* abrir_ficheiro_leitura(const char*);            // Abre um ficheiro para leitura
+__attribute__((unused)) FILE* abrir_ficheiro_leitura_binaria(const char*);    // Abre um ficheiro para leitura binária
+__attribute__((unused)) FILE* abrir_ficheiro_escrita(const char*);            // Abre um ficheiro para escrita
+__attribute__((unused)) FILE* abrir_ficheiro_escrita_binaria(const char*);    // Abre um ficheiro para escrita em modo binário
+__attribute__((unused)) FILE* abrir_ficheiro_append(const char*);             // Abre um ficheiro para append
+__attribute__((unused)) FILE* abrir_ficheiro_append_binario(const char*);     // Abre um ficheiro para append em modo binário
+FILE* abrir_ficheiro(const char*, char*);                                     // Abre um ficheiro com o modo especificado
+int   fechar_ficheiro(FILE*);                                                 // Fecha um ficheiro
 
 
 
