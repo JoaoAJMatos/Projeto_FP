@@ -192,6 +192,61 @@ int caminho_existe(const char* caminho) {
 }
 
 
+/**
+ * @brief Cria uma árvore de diretórios a partir de um caminho.
+ * @param caminho
+ * @return int
+ */
+int criar_arvore_diretorios(const char* caminho) {
+    char *p = caminho_relativo_para_absoluto(caminho);;
+
+    while ((p = strchr(p + 1, '/')) != NULL) {
+        *p = '\0';
+        if (mkdir(caminho, S_IRWXU) == -1) {
+            return ERRO;
+        }
+        *p = '/';
+    }
+
+    return OK;
+}
+
+
+/**
+ * @brief Devolve a localização do diretório atual.
+ * @return char*
+ */
+char* diretorio_atual() {
+    char* caminho = malloc(TAMANHO_MAXIMO_CAMINHO);
+    getcwd(caminho, TAMANHO_MAXIMO_CAMINHO);
+    return caminho;
+}
+
+
+/**
+ * @brief Devolve a extensão de um ficheiro.
+ * @param caminho
+ * @return
+ */
+char* extensao_ficheiro(const char* caminho) {
+    char* extensao = strrchr(caminho, '.');
+    if (extensao == NULL) {
+        return NULL;
+    }
+    return extensao;
+}
+
+/**
+ * @brief Devolve o tamanho de um ficheiro em bytes.
+ * @param caminho
+ * @return
+ */
+t_tamanho_ficheiro tamanho_ficheiro(const char* caminho) {
+    struct stat st;
+    stat(caminho, &st);
+    return st.st_size;
+}
+
 
 
 /* ========================================================== */
