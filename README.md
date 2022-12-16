@@ -85,15 +85,15 @@ esses _headers_ sejam incluídos indiretamente por outros _headers_.
 #pragma once    // Não aconselhado
 ```
 
-### Utilitários
+## Utilitários
 
 A acompanhar o código fonte do projeto, na pasta `scripts`, encontram-se diversos utilitários que facilitam a interação, gestão e construção do projeto.
 
 Os dois ficheiros principais (`start.sh` ou `start.ps1`) podem ser utilizados para interagir com os utilitários do projeto.
 
-#### Utilitários disponíveis
+### Utilitários disponíveis
 
-##### Construir ficheiro C único:
+#### Construir ficheiro C único:
 
 Utilizado para construir um único ficheiro __C__ a partir de um projeto com diversos ficheiros. Útil para a criação de um ficheiro `.c` compatível com a ferramenta de deteção de plágio utilizada pela instituição.
 
