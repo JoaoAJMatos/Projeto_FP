@@ -1,11 +1,15 @@
 # Projeto de Fundamentos de Programação
 
+O presente repositório contém o código fonte do projeto
+desenvolvido no âmbito do primeiro semestre do curso __PSI__
+para a unidade curricular de __Fundamentos de Programação__, lecionada pelo __professor José Vítor Martins Ramos__.
+
 ## Autores
 
-* [João Matos](https://github.com/JoaoAJMatos)
-* [Rúben Lisboa](https://github.com/Lisboa14)
+* [João Matos](https://github.com/JoaoAJMatos) (__2220857__)
+* [Rúben Lisboa](https://github.com/Lisboa14) (__2220862__)
 
-### Contribuir
+### Contribuir (instruções para o grupo)
 
 Para contribuir para o projeto, por favor segue as indicações descritas [aqui](CONTRIBUIR.md)
 
@@ -58,4 +62,16 @@ ficheiros `.h` correspondentes.
 - Usar apenas caracteres alfanuméricos minúsculos (`a-z0-9`) e _underscore_ (`_`) para nomes de ficheiros e diretórios.
 - Todos os ficheiros `.c` e `.h` devem incluir (`#include`) todos os _headers_ que utilizam diretamente, mesmo que
 esses _headers_ sejam incluídos indiretamente por outros _headers_.
-- Os ficheiros `.h` devem incluir _header guards_ para evitar que sejam incluídos mais do que uma vez.
+- Os ficheiros `.h` devem incluir _header guards_ para evitar que sejam incluídos mais do que uma vez. 
+Exemplo:
+
+```c
+#ifndef PORJETO_NOME_DO_FICHEIRO_H
+#define PORJETO_NOME_DO_FICHEIRO_H
+
+#endif
+
+// Ou
+
+#pragma once    // Não aconselhado
+```
