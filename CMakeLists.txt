@@ -11,5 +11,8 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 # Obter todos os header files
 file(GLOB_RECURSE HEADERS "src/*.h")
 
+# Add compiler flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -lcurses")
+
 # Adicionar os ficheiros ao projeto
 add_executable(projeto ${SOURCES} ${HEADERS})
