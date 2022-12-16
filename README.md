@@ -4,6 +4,34 @@ O presente repositório contém o código fonte do projeto
 desenvolvido no âmbito do primeiro semestre do curso __PSI__
 para a unidade curricular de __Fundamentos de Programação__, lecionada pelo __professor José Vítor Martins Ramos__.
 
+## Download e compilação
+
+Para fazer o download do projeto, basta clonar o repositório:
+
+``` bash
+git clone https://github.com/JoaoAJMatos/Projeto_FP.git
+```
+
+Para compilar o projeto, pode fazê-lo manualmente, ou com recurso às ferramentas que acompanham o projeto.
+
+### Compilação manual
+
+```bash
+cd Projeto_FP
+mkdir build
+cd build
+cmake ..
+make
+```
+
+### Compilação com recurso às ferramentas do projeto
+
+```bash
+cd Projeto_FP
+cd scripts
+./start.sh # ou ./start.ps1 no Windows
+```
+
 ## Autores
 
 * [João Matos](https://github.com/JoaoAJMatos) (__2220857__)
@@ -91,9 +119,7 @@ A acompanhar o código fonte do projeto, na pasta `scripts`, encontram-se divers
 
 Os dois ficheiros principais (`start.sh` ou `start.ps1`) podem ser utilizados para interagir com os utilitários do projeto.
 
-### Utilitários disponíveis
-
-#### Construir ficheiro C único:
+### Construir ficheiro C único:
 
 Utilizado para construir um único ficheiro __C__ a partir de um projeto com diversos ficheiros. Útil para a criação de um ficheiro `.c` compatível com a ferramenta de deteção de plágio utilizada pela instituição.
 
@@ -103,7 +129,7 @@ Adicionalmente a ferramenta deteta a utilização de bibliotecas externas que n�
 
 O ficheiro `.c` gerado pode ser compilado automáticamente, ou através da execução do comando de compilação construido pela ferramenta.
 
-##### Gerar projeto para o Code::Blocks
+### Gerar projeto para o Code::Blocks
 
 Esta ferramenta é utilizada para converter um projeto com diversos ficheiros, num projeto passível de ser aberto no IDE __Code::Blocks__.
 
