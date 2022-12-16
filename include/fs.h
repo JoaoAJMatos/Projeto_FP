@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "../comum.h"                           // Para a definição da constante __inline__
+#include "comum.h"                           // Para a definição da constante __inline__
 
 #if defined(_WIN32) || defined(_WIN34)          // Windows
 #define SEPARADOR_DIRETORIO "\\"                // Separador de diretório para Windows

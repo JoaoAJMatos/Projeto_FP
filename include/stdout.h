@@ -12,7 +12,7 @@
 #include <wchar.h>
 #include <locale.h>
 
-#include "../comum.h"
+#include "comum.h"
 #include "formatacao_texto.h"
 
 #if defined(_WIN32) || defined(_WIN64)          // Windows

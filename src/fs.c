@@ -2,7 +2,7 @@
 // Created by João Matos on 13/12/2022.
 //
 
-#include "fs.h"
+#include "../include/fs.h"
 
 /* ========================================================== */
 /* =                      PROTÓTIPOS                        = */
