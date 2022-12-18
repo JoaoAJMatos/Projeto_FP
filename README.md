@@ -138,3 +138,9 @@ Todos os ficheiros do projeto (`.c` e `.h`) são adicionados ao contexto do proj
 Por fim, o ficheiro `.cdb` com as configurações do projeto em `xml` é gerado, permitindo a abertura do projeto no __Code::Blocks__.
 
 O __Code::Blocks__ guarda todos os ficheiros do projeto em diretórios virtuais no ambiente do IDE, diretórios estes definidos automáticamente no ficheiro `.cdb`, com base nos diretórios do projeto original.
+
+<br>
+<br>
+<br>
+
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Licença Creative Commons" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/88x31.png" /></a>
