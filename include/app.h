@@ -107,12 +107,12 @@ void  mostrar_estado_programa(t_estado_programa*);
 
 
 /// PROCURA ///
-int procurar_participante_por_id(t_participante**, int);
-int procurar_atividade_por_id(t_atividade**, int);
-int procurar_inscricao_por_id(t_inscricao**, int);
+int procurar_participante_por_id(t_participante**, int, int);
+int procurar_atividade_por_id(t_atividade**, int, int);
+int procurar_inscricao_por_id(t_inscricao**, int, int);
 
-int procurar_participante_por_nif(t_participante**, int);
-int procurar_participante_por_email(t_participante**, char*);
-int procurar_participante_por_telefone(t_participante**, int);
+int procurar_participante_por_nif(t_participante**, int, int);
+int procurar_participante_por_email(t_participante**, int, char*);
+int procurar_participante_por_telefone(t_participante**, int, int);
 
 #endif //PROJETO1_APP_H

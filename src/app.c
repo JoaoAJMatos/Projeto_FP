@@ -11,9 +11,15 @@
 /* ========================================================== */
 
 static void libertar_memoria(void* ponteiro, ...);
-static void concatenar_strings(char* destino, ...);
-static char* obter_localizacao_save();                  // Obtem a localização do save do programa a partir do ficheiro de configurações
-static int  salvar_localizacao_save(char* localizacao); // Guarda a localização do save do programa no ficheiro de configurações
+static int  tamanho_vetor(void** vetor);            // Retorna o tamanho de um vetor (percorre o vetor até encontrar um elemento nulo)
+
+static void guardar_participantes(t_estado_programa*, FILE*);
+static void guardar_atividades(t_estado_programa*, FILE*);
+static void guardar_inscricoes(t_estado_programa*, FILE*);
+
+static void carregar_participantes(t_estado_programa*, FILE*);
+static void carregar_atividades(t_estado_programa*, FILE*);
+static void carregar_inscricoes(t_estado_programa*, FILE*);
 
 
 /* ========================================================== */
@@ -140,7 +146,7 @@ t_inscricao* criar_inscricao(int identificador, int id_participante, int id_ativ
     inscricao->id_atividade = id_atividade;
 
     // Procurar o valor associado à atividade com o ID passado
-    indice_procura = procurar_atividade_por_id(atividades, id_atividade);
+    indice_procura = procurar_atividade_por_id(atividades, tamanho_vetor((void **) atividades), id_atividade);
     if (indice_procura == -1) {
         return NULL;
     }
@@ -220,43 +226,13 @@ int guardar_estado_programa(char* nome_ficheiro, t_estado_programa* estado) {
         return ERRO;
     }
 
-    int numero_participantes = *estado->numero_participantes_inseridos;
-    int numero_atividades = *estado->numero_atividadades_inseridas;
-    int numero_inscricoes = *estado->numero_de_inscricoes;
+    guardar_atividades(estado, ficheiro);
+    guardar_participantes(estado, ficheiro);
+    guardar_inscricoes(estado, ficheiro);
 
-
-    // Guardar o número de participantes inseridos
-    fwrite(&numero_participantes, sizeof(int), 1, ficheiro);
-
-    // Guardar os participantes
-    for (int i = 0; i < *estado->numero_participantes_inseridos; i++) {
-        fwrite(estado->participantes[i], sizeof(t_participante), 1, ficheiro);
-    }
-
-    // Guardar o número de atividades inseridas
-    fwrite(&numero_atividades, sizeof(int), 1, ficheiro);
-
-    // Guardar as atividades
-    for (int i = 0; i < *estado->numero_atividadades_inseridas; i++) {
-        fwrite(estado->atividades[i], sizeof(t_atividade), 1, ficheiro);
-    }
-
-    // Guardar o número de inscrições
-    fwrite(&numero_inscricoes, sizeof(int), 1, ficheiro);
-
-    // Guardar as inscrições
-    for (int i = 0; i < *estado->numero_de_inscricoes; i++) {
-        fwrite(estado->inscricoes[i], sizeof(t_inscricao), 1, ficheiro);
-    }
-
-    // Guardar o último save
-    fwrite(&estado->ultimo_save, sizeof(int), 1, ficheiro);
-
-    // Guardar a cor do texto
-    fwrite(estado->cor_texto, sizeof(char), 1, ficheiro);
-
-    // Guardar a cor do fundo
-    fwrite(estado->cor_fundo, sizeof(char), 1, ficheiro);
+    fwrite(&estado->ultimo_save, sizeof(int), 1, ficheiro); // Guardar o último save
+    fwrite(estado->cor_texto, sizeof(char), 1, ficheiro);   // Guardar a cor do texto
+    fwrite(estado->cor_fundo, sizeof(char), 1, ficheiro);   // Guardar a cor do fundo
 
     fechar_ficheiro(ficheiro);
     return OK;
@@ -264,60 +240,21 @@ int guardar_estado_programa(char* nome_ficheiro, t_estado_programa* estado) {
 
 t_estado_programa* carregar_estado_programa(char* nome_ficheiro) {
     t_estado_programa *estado_programa = malloc(sizeof(t_estado_programa));
-    t_participante **participantes = malloc(sizeof(t_participante*));
-    t_atividade **atividades = malloc(sizeof(t_atividade*));
-    t_inscricao **inscricoes = malloc(sizeof(t_inscricao*));
-    int numero_participantes;
-    int numero_atividades;
-    int numero_inscricoes;
+    estado_programa->participantes = malloc(sizeof(t_participante*));
+    estado_programa->atividades = malloc(sizeof(t_atividade*));
+    estado_programa->inscricoes = malloc(sizeof(t_inscricao*));
 
     FILE* ficheiro = abrir_ficheiro(nome_ficheiro, LEITURA_BINARIA);
     if (ficheiro == NULL) {
         return NULL;
     }
 
-    // Carregar o número de participantes inseridos
-    fread(&numero_participantes, sizeof(int), 1, ficheiro);
-
-    // Carregar os participantes
-    for (int i = 0; i < numero_participantes; i++) {
-        participantes[i] = malloc(sizeof(t_participante));
-        fread(participantes[i], sizeof(t_participante), 1, ficheiro);
-    }
-
-    // Carregar o número de atividades inseridas
-    fread(&numero_atividades, sizeof(int), 1, ficheiro);
-
-    // Carregar as atividades
-    for (int i = 0; i < numero_atividades; i++) {
-        atividades[i] = malloc(sizeof(t_atividade));
-        fread(atividades[i], sizeof(t_atividade), 1, ficheiro);
-    }
-
-    // Carregar o número de inscrições
-    fread(&numero_inscricoes, sizeof(int), 1, ficheiro);
-
-    // Carregar as inscrições
-    for (int i = 0; i < numero_inscricoes; i++) {
-        inscricoes[i] = malloc(sizeof(t_inscricao));
-        fread(inscricoes[i], sizeof(t_inscricao), 1, ficheiro);
-    }
-
-    // Carregar o último save
-    fread(&estado_programa->ultimo_save, sizeof(int), 1, ficheiro);
-
-    // Carregar a cor do texto
-    fread(estado_programa->cor_texto, sizeof(char), 1, ficheiro);
-
-    // Carregar a cor do fundo
-    fread(estado_programa->cor_fundo, sizeof(char), 1, ficheiro);
-
-    estado_programa->participantes = participantes;
-    estado_programa->atividades = atividades;
-    estado_programa->inscricoes = inscricoes;
-    estado_programa->numero_participantes_inseridos = &numero_participantes;
-    estado_programa->numero_atividadades_inseridas = &numero_atividades;
-    estado_programa->numero_de_inscricoes = &numero_inscricoes;
+    carregar_atividades(estado_programa, ficheiro);
+    carregar_participantes(estado_programa, ficheiro);
+    carregar_inscricoes(estado_programa, ficheiro);
+    fread(&estado_programa->ultimo_save, sizeof(int), 1, ficheiro); // Carregar o último save
+    fread(estado_programa->cor_texto, sizeof(char), 1, ficheiro);   // Carregar a cor do texto
+    fread(estado_programa->cor_fundo, sizeof(char), 1, ficheiro);   // Carregar a cor do fundo
 
     fechar_ficheiro(ficheiro);
     return estado_programa;
@@ -333,81 +270,57 @@ t_estado_programa* carregar_estado_programa(char* nome_ficheiro) {
 /* =                UTILITÁRIOS DE PESQUISA                 = */
 /* ========================================================== */
 
-int procurar_participante_por_id(t_participante** participantes, int id_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_id(t_participante** participantes, int numero_participantes, int id_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->identificador == id_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_atividade_por_id(t_atividade** atividades, int id_procurado) {
-    int i = 0;
-
-    while (atividades[i] != NULL) {
+int procurar_atividade_por_id(t_atividade** atividades, int numero_atividades, int id_procurado) {
+    for (int i = 0; i < numero_atividades; i++) {
         if (atividades[i]->identificador == id_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_inscricao_por_id(t_inscricao** inscricoes, int id_procurado) {
-    int i = 0;
-
-    while (inscricoes[i] != NULL) {
+int procurar_inscricao_por_id(t_inscricao** inscricoes, int numero_inscricoes, int id_procurado) {
+    for (int i = 0; i < numero_inscricoes; i++) {
         if (inscricoes[i]->identificador == id_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_participante_por_nif(t_participante** participantes, int nif_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_nif(t_participante** participantes, int numero_participantes, int nif_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->nif == nif_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_participante_por_email(t_participante** participantes, char* email_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_email(t_participante** participantes, int numero_participantes, char* email_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (strcmp(participantes[i]->email, email_procurado) == 0) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_participante_por_telefone(t_participante** participantes, int telefone_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_telefone(t_participante** participantes, int numero_participantes, int telefone_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->telefone == telefone_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
@@ -427,16 +340,76 @@ static void libertar_memoria(void* ponteiro, ...) {
     va_end(lista);
 }
 
-static void concatenar_strings(char* destino, ...) {
-    va_list lista;
-    va_start(lista, destino);
-
-    char* string = va_arg(lista, char*);
-
-    while (string != NULL) {
-        strcat(destino, string);
-        string = va_arg(lista, char*);
+static int tamanho_vetor(void** vetor) {
+    int tamanho = 0;
+    while (vetor[tamanho] != NULL) {
+        tamanho++;
     }
+    return tamanho;
+}
 
-    va_end(lista);
+static void guardar_participantes(t_estado_programa* estado, FILE* ficheiro) {
+    // Guardar o número de participantes inseridos
+    fwrite(*&estado->numero_participantes_inseridos, sizeof(int), 1, ficheiro);
+
+    // Guardar os participantes
+    for (int i = 0; i < *estado->numero_participantes_inseridos; i++) {
+        fwrite(estado->participantes[i], sizeof(t_participante), 1, ficheiro);
+    }
+}
+
+static void guardar_atividades(t_estado_programa* estado, FILE* ficheiro) {
+    // Guardar o número de atividades inseridas
+    fwrite(*&estado->numero_atividadades_inseridas, sizeof(int), 1, ficheiro);
+
+    // Guardar as atividades
+    for (int i = 0; i < *estado->numero_atividadades_inseridas; i++) {
+        fwrite(estado->atividades[i], sizeof(t_atividade), 1, ficheiro);
+    }
+}
+
+static void guardar_inscricoes(t_estado_programa* estado, FILE* ficheiro) {
+    // Guardar o número de inscrições
+    fwrite(*&estado->numero_de_inscricoes, sizeof(int), 1, ficheiro);
+
+    // Guardar as inscrições
+    for (int i = 0; i < *estado->numero_de_inscricoes; i++) {
+        fwrite(estado->inscricoes[i], sizeof(t_inscricao), 1, ficheiro);
+    }
+}
+
+static void carregar_participantes(t_estado_programa* estado, FILE* ficheiro) {
+    // Carregar o número de participantes inseridos
+    estado->numero_participantes_inseridos = malloc(sizeof(int));
+    fread(estado->numero_participantes_inseridos, sizeof(int), 1, ficheiro);
+
+    // Carregar os participantes
+    for (int i = 0; i < *estado->numero_participantes_inseridos; i++) {
+        estado->participantes[i] = malloc(sizeof(t_participante));
+        fread(estado->participantes[i], sizeof(t_participante), 1, ficheiro);
+    }
+}
+
+static void carregar_atividades(t_estado_programa* estado, FILE* ficheiro) {
+    // Carregar o número de atividades inseridas
+    estado->numero_atividadades_inseridas = malloc(sizeof(int));
+    fread(estado->numero_atividadades_inseridas, sizeof(int), 1, ficheiro);
+
+    // Carregar as atividades
+    for (int i = 0; i < *estado->numero_atividadades_inseridas; i++) {
+        estado->atividades[i] = malloc(sizeof(t_atividade));
+        fread(estado->atividades[i], sizeof(t_atividade), 1, ficheiro);
+    }
+}
+
+static void carregar_inscricoes(t_estado_programa* estado, FILE* ficheiro) {
+    // Carregar o número de inscrições
+    estado->numero_de_inscricoes = malloc(sizeof(int));
+    fread(estado->numero_de_inscricoes, sizeof(int), 1, ficheiro);
+
+    // Carregar as inscrições
+    for (int i = 0; i < *estado->numero_de_inscricoes; i++) {
+        estado->inscricoes[i] = malloc(sizeof(t_inscricao));
+        fread(estado->inscricoes[i], sizeof(t_inscricao), 1, ficheiro);
+    }
 }
