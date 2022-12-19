@@ -11,10 +11,15 @@
 /* ========================================================== */
 
 static void libertar_memoria(void* ponteiro, ...);
-static void concatenar_strings(char* destino, ...);
-static char* obter_localizacao_save();                  // Obtem a localização do save do programa a partir do ficheiro de configurações
-static int  salvar_localizacao_save(char* localizacao); // Guarda a localização do save do programa no ficheiro de configurações
-__inline__ static int tamanho_vetor_bencode(char*);     // Devolve o tamanho de um vetor serializado em bencode
+static int  tamanho_vetor(void** vetor);            // Retorna o tamanho de um vetor (percorre o vetor até encontrar um elemento nulo)
+
+static void guardar_participantes(t_estado_programa*, FILE*);
+static void guardar_atividades(t_estado_programa*, FILE*);
+static void guardar_inscricoes(t_estado_programa*, FILE*);
+
+static void carregar_participantes(t_estado_programa*, FILE*);
+static void carregar_atividades(t_estado_programa*, FILE*);
+static void carregar_inscricoes(t_estado_programa*, FILE*);
 
 
 /* ========================================================== */
@@ -141,7 +146,7 @@ t_inscricao* criar_inscricao(int identificador, int id_participante, int id_ativ
     inscricao->id_atividade = id_atividade;
 
     // Procurar o valor associado à atividade com o ID passado
-    indice_procura = procurar_atividade_por_id(atividades, id_atividade);
+    indice_procura = procurar_atividade_por_id(atividades, tamanho_vetor((void **) atividades), id_atividade);
     if (indice_procura == -1) {
         return NULL;
     }
@@ -175,7 +180,7 @@ void mostrar_inscricao(t_inscricao* inscricao) {
 
 t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t_atividade** vetor_atividades,
                                          t_inscricao** vetor_inscricoes, int* contador_participantes,
-                                         int* contador_atividades, int* contador_inscricoes, char* cor_texto, char* cor_fundo)
+                                         int* contador_atividades, int* contador_inscricoes, const char* cor_texto, const char* cor_fundo)
 {
     t_estado_programa* estado_programa = (t_estado_programa*) malloc(sizeof(t_estado_programa));
     estado_programa->participantes = vetor_participantes;
@@ -185,8 +190,8 @@ t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t
     estado_programa->numero_atividadades_inseridas = contador_atividades;
     estado_programa->numero_de_inscricoes = contador_inscricoes;
     estado_programa->ultimo_save = 0;
-    estado_programa->cor_texto = cor_texto;
-    estado_programa->cor_fundo = cor_fundo;
+    strcpy(estado_programa->cor_texto, cor_texto);
+    strcpy(estado_programa->cor_fundo, cor_fundo);
     return estado_programa;
 }
 
@@ -194,30 +199,6 @@ void libertar_estado_programa(t_estado_programa* estado_programa) {
     free(estado_programa);
 }
 
-char* serializar_estado_programa(t_estado_programa* estado_programa) {
-    char* vetor_participantes_serializado = serializar_participantes(estado_programa->participantes, *estado_programa->numero_participantes_inseridos);
-    char* vetor_atividades_serializado = serializar_atividades(estado_programa->atividades, *estado_programa->numero_atividadades_inseridas);
-    char* vetor_inscricoes_serializado = serializar_inscricoes(estado_programa->inscricoes, *estado_programa->numero_de_inscricoes);
-    char* numero_participantes_inseridos_serializado = serializar_int(*estado_programa->numero_participantes_inseridos);
-    char* numero_atividades_inseridas_serializado = serializar_int(*estado_programa->numero_atividadades_inseridas);
-    char* numero_de_inscricoes_serializado = serializar_int(*estado_programa->numero_de_inscricoes);
-    char* ultimo_save_serializado = serializar_int(estado_programa->ultimo_save);
-
-    char* estado_programa_serializado = (char*) malloc(sizeof(char) * (strlen(vetor_participantes_serializado)
-                                        + strlen(vetor_atividades_serializado)
-                                        + strlen(vetor_inscricoes_serializado)
-                                        + strlen(numero_participantes_inseridos_serializado)
-                                        + strlen(numero_atividades_inseridas_serializado)
-                                        + strlen(numero_de_inscricoes_serializado)
-                                        + strlen(ultimo_save_serializado) + 1));
-
-    strcpy(estado_programa_serializado, vetor_participantes_serializado);
-    concatenar_strings(estado_programa_serializado, vetor_atividades_serializado,
-                       vetor_inscricoes_serializado, numero_participantes_inseridos_serializado, numero_atividades_inseridas_serializado,
-                       numero_de_inscricoes_serializado, ultimo_save_serializado, NULL);
-
-    return estado_programa_serializado;
-}
 
 void mostrar_estado_programa(t_estado_programa* estado_programa) {
     printf("Participantes:\n");
@@ -239,56 +220,44 @@ void mostrar_estado_programa(t_estado_programa* estado_programa) {
     printf("Último save: %d\n\n", estado_programa->ultimo_save);
 }
 
-// TODO: Fazer a deserialização do estado do programa
-t_estado_programa* deserializar_estado_programa(char* estado_programa_serializado) {
-    int numero_participantes_inseridos = 0, numero_atividades_inseridas = 0, numero_de_inscricoes = 0, ultimo_save = 0;
-    t_participante** participantes;
-    t_atividade** atividades;
-    t_inscricao** inscricoes;
-    t_estado_programa *estado_programa = NULL;
-
-    // Deserializar participantes
-    numero_participantes_inseridos = tamanho_vetor_bencode(estado_programa_serializado);
-    participantes = (t_participante**) malloc(sizeof(t_participante*) * numero_participantes_inseridos);
-    printf("\n\nNúmero de participantes inseridos: %d\n", numero_participantes_inseridos);
-
-    for (int i = 0; i < numero_participantes_inseridos; i++) {
-        participantes[i] = deserializar_participante(estado_programa_serializado);
-        estado_programa_serializado = estado_programa_serializado + strlen(estado_programa_serializado) + 1;
-    }
-
-    for (int i = 0; i < numero_participantes_inseridos; i++) {
-        mostrar_participante(participantes[i]);
-    }
-
-    return estado_programa;
-}
-
-int guardar_estado_programa(t_estado_programa* estado) {
-    FILE* ficheiro;
-    char caminho_string[1024], caminho_string_final[1024];
-    char* caminho_para_ficheiro;
-    t_caminho* caminho = NULL;
-    char* estado_programa_serializado = serializar_estado_programa(estado);
-
-    caminho_para_ficheiro = obter_localizacao_save();
-    if (caminho_para_ficheiro == NULL) {
-        do {
-            prompt("Nenhum save foi detetado", "Insira o caminho para o ficheiro onde o estado do programa deve ser guardado",
-                   "Caminho relativo/absoluto", caminho_string, STRING, estado->cor_texto, estado->cor_fundo);
-            caminho = caminho_criar_a_partir_de_string(caminho_string);
-        } while (caminho->erro != CAMINHO_OK);
-    }
-
-    ficheiro = abrir_ficheiro(caminho_para_ficheiro, ESCRITA_BINARIA);
+int guardar_estado_programa(char* nome_ficheiro, t_estado_programa* estado) {
+    FILE* ficheiro = abrir_ficheiro(nome_ficheiro, ESCRITA_BINARIA);
     if (ficheiro == NULL) {
         return ERRO;
     }
 
-    fwrite(estado_programa_serializado, sizeof(char), strlen(estado_programa_serializado), ficheiro);
-    fechar_ficheiro(ficheiro);
+    guardar_atividades(estado, ficheiro);
+    guardar_participantes(estado, ficheiro);
+    guardar_inscricoes(estado, ficheiro);
 
+    fwrite(&estado->ultimo_save, sizeof(int), 1, ficheiro); // Guardar o último save
+    fwrite(estado->cor_texto, sizeof(char), 1, ficheiro);   // Guardar a cor do texto
+    fwrite(estado->cor_fundo, sizeof(char), 1, ficheiro);   // Guardar a cor do fundo
+
+    fechar_ficheiro(ficheiro);
     return OK;
+}
+
+t_estado_programa* carregar_estado_programa(char* nome_ficheiro) {
+    t_estado_programa *estado_programa = malloc(sizeof(t_estado_programa));
+    estado_programa->participantes = malloc(sizeof(t_participante*));
+    estado_programa->atividades = malloc(sizeof(t_atividade*));
+    estado_programa->inscricoes = malloc(sizeof(t_inscricao*));
+
+    FILE* ficheiro = abrir_ficheiro(nome_ficheiro, LEITURA_BINARIA);
+    if (ficheiro == NULL) {
+        return NULL;
+    }
+
+    carregar_atividades(estado_programa, ficheiro);
+    carregar_participantes(estado_programa, ficheiro);
+    carregar_inscricoes(estado_programa, ficheiro);
+    fread(&estado_programa->ultimo_save, sizeof(int), 1, ficheiro); // Carregar o último save
+    fread(estado_programa->cor_texto, sizeof(char), 1, ficheiro);   // Carregar a cor do texto
+    fread(estado_programa->cor_fundo, sizeof(char), 1, ficheiro);   // Carregar a cor do fundo
+
+    fechar_ficheiro(ficheiro);
+    return estado_programa;
 }
 
 /* ========================================================== */
@@ -301,434 +270,60 @@ int guardar_estado_programa(t_estado_programa* estado) {
 /* =                UTILITÁRIOS DE PESQUISA                 = */
 /* ========================================================== */
 
-int procurar_participante_por_id(t_participante** participantes, int id_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_id(t_participante** participantes, int numero_participantes, int id_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->identificador == id_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_atividade_por_id(t_atividade** atividades, int id_procurado) {
-    int i = 0;
-
-    while (atividades[i] != NULL) {
+int procurar_atividade_por_id(t_atividade** atividades, int numero_atividades, int id_procurado) {
+    for (int i = 0; i < numero_atividades; i++) {
         if (atividades[i]->identificador == id_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_inscricao_por_id(t_inscricao** inscricoes, int id_procurado) {
-    int i = 0;
-
-    while (inscricoes[i] != NULL) {
+int procurar_inscricao_por_id(t_inscricao** inscricoes, int numero_inscricoes, int id_procurado) {
+    for (int i = 0; i < numero_inscricoes; i++) {
         if (inscricoes[i]->identificador == id_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_participante_por_nif(t_participante** participantes, int nif_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_nif(t_participante** participantes, int numero_participantes, int nif_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->nif == nif_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_participante_por_email(t_participante** participantes, char* email_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_email(t_participante** participantes, int numero_participantes, char* email_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (strcmp(participantes[i]->email, email_procurado) == 0) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-int procurar_participante_por_telefone(t_participante** participantes, int telefone_procurado) {
-    int i = 0;
-
-    while (participantes[i] != NULL) {
+int procurar_participante_por_telefone(t_participante** participantes, int numero_participantes, int telefone_procurado) {
+    for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->telefone == telefone_procurado) {
             return i;
         }
-        i++;
     }
-
     return -1;
 }
 
-/* ========================================================== */
-
-
-
-/* ========================================================== */
-/* =                     SERIALIZAÇÃO                       = */
-/* ========================================================== */
-
-/// SERIALIZAÇÃO ///
-
-/// Serialização de tipos primitivos ///
-
-char* serializar_string(char* string) {
-    int tamanho = strlen(string);
-    char* string_serializada = malloc(tamanho + sizeof (int) + 1);
-
-    sprintf(string_serializada, "%d:%s", tamanho, string);
-
-    return string_serializada;
-}
-
-char* serializar_int(int numero) {
-    char* numero_serializado = malloc(sizeof(char) * 15);
-
-    sprintf(numero_serializado, "i%de", numero);
-
-    return numero_serializado;
-}
-
-char* serializar_float(float numero) {
-    char* numero_serializado = malloc(sizeof(char) * 15);
-    sprintf(numero_serializado, "f%fe", numero);
-    return numero_serializado;
-}
-
-char* serializar_vetor(char** conteudo_serializado, int tamanho) {
-    int i;
-    char* vetor_serializado = malloc(sizeof(char) * NUMERO_MAXIMO_DE_INSCRICOES);
-
-    sprintf(vetor_serializado, "l%d&", tamanho);
-
-    for (i = 0; i < tamanho; i++) {
-        strcat(vetor_serializado, conteudo_serializado[i]);
-        if (i != tamanho - 1) {
-            strcat(vetor_serializado, "&");
-        }
-    }
-
-    strcat(vetor_serializado, "e");
-
-    return vetor_serializado;
-}
-
-
-
-
-/// Serialização de estruturas ///
-
-char* serializar_participante(t_participante* participante) {
-    char* nome_serializado = serializar_string(participante->nome);
-    char* email_serializado = serializar_string(participante->email);
-    char* nif_serializado = serializar_int(participante->nif);
-    char* telefone_serializado = serializar_int(participante->telefone);
-    char* id_serializado = serializar_int(participante->identificador);
-
-    char* participante_serializado = malloc(strlen(nome_serializado) + strlen(email_serializado) + strlen(nif_serializado) +
-                                            strlen(telefone_serializado) + strlen(id_serializado) + 1);
-
-    strcpy(participante_serializado, nome_serializado);
-
-    concatenar_strings(participante_serializado, id_serializado, email_serializado, nif_serializado, telefone_serializado, NULL);
-    libertar_memoria(nome_serializado, email_serializado, nif_serializado, telefone_serializado, id_serializado, NULL);
-
-    return participante_serializado;
-}
-
-char* serializar_atividade(t_atividade* atividade) {
-    char* identificador_serializado = serializar_int(atividade->identificador);
-    char* designacao_serializada = serializar_string(atividade->designacao);
-    char* data_serializado = serializar_string(atividade->data);
-    char* hora_serializado = serializar_string(atividade->hora);
-    char* local_serializado = serializar_string(atividade->local);
-    char* tipo_serializado = serializar_string(atividade->tipo);
-    char* associacao_serializado = serializar_string(atividade->associacao_estudantes);
-    char* valor_serializado = serializar_float(atividade->valor);
-
-    char* atividade_serializada = malloc(strlen(identificador_serializado) + strlen(designacao_serializada) + strlen(data_serializado) +
-                                         strlen(hora_serializado) + strlen(local_serializado) + strlen(tipo_serializado) + strlen(associacao_serializado) +
-                                         strlen(valor_serializado) + 1);
-
-    strcpy(atividade_serializada, identificador_serializado);
-
-
-    concatenar_strings(atividade_serializada, designacao_serializada, data_serializado, hora_serializado, local_serializado,
-                       tipo_serializado, associacao_serializado, valor_serializado, NULL);
-
-    libertar_memoria(identificador_serializado, designacao_serializada, data_serializado, hora_serializado,
-                       local_serializado, tipo_serializado, associacao_serializado, valor_serializado, NULL);
-
-    return atividade_serializada;
-}
-
-char* serializar_inscricao(t_inscricao* inscricao) {
-    char* id_serializado = serializar_int(inscricao->identificador);
-    char* id_participante_serializado = serializar_int(inscricao->id_participante);
-    char* id_atividade_serializado = serializar_int(inscricao->id_atividade);
-    char* valor_serializado = serializar_float(inscricao->valor_pago);
-    char* data_serializada = serializar_string(inscricao->data);
-    char* hora_serializada = serializar_string(inscricao->hora);
-
-    char* inscricao_serializada = malloc(strlen(id_serializado) + strlen(id_participante_serializado) + strlen(id_atividade_serializado) +
-                                         strlen(valor_serializado) + strlen(data_serializada) + strlen(hora_serializada) + 1);
-
-    strcpy(inscricao_serializada, id_serializado);
-    concatenar_strings(inscricao_serializada, id_participante_serializado, id_atividade_serializado, valor_serializado, data_serializada, hora_serializada, NULL);
-    libertar_memoria(id_serializado, id_participante_serializado, id_atividade_serializado, valor_serializado, data_serializada, hora_serializada, NULL);
-
-    return inscricao_serializada;
-}
-
-
-/// Serialização de listas de estruturas ///
-
-char* serializar_participantes(t_participante** participantes, int numero_participantes) {
-    int i;
-    char** participantes_serializados = malloc(sizeof(char*) * numero_participantes);
-
-    for (i = 0; i < numero_participantes; i++) {
-        participantes_serializados[i] = serializar_participante(participantes[i]);
-    }
-
-    char* participantes_serializados_string = serializar_vetor(participantes_serializados, numero_participantes);
-
-    for (i = 0; i < numero_participantes; i++) {
-        free(participantes_serializados[i]);
-    }
-
-    free(participantes_serializados);
-
-    return participantes_serializados_string;
-}
-
-char* serializar_atividades(t_atividade** atividades, int numero_atividades) {
-    int i;
-    char** atividades_serializadas = malloc(sizeof(char*) * numero_atividades);
-
-    for (i = 0; i < numero_atividades; i++) {
-        atividades_serializadas[i] = serializar_atividade(atividades[i]);
-    }
-
-    char* atividades_serializadas_string = serializar_vetor(atividades_serializadas, numero_atividades);
-
-    for (i = 0; i < numero_atividades; i++) {
-        free(atividades_serializadas[i]);
-    }
-
-    free(atividades_serializadas);
-
-    return atividades_serializadas_string;
-}
-
-char* serializar_inscricoes(t_inscricao** inscricoes, int numero_inscricoes) {
-    int i;
-    char** inscricoes_serializadas = malloc(sizeof(char*) * numero_inscricoes);
-
-    for (i = 0; i < numero_inscricoes; i++) {
-        inscricoes_serializadas[i] = serializar_inscricao(inscricoes[i]);
-    }
-
-    char* inscricoes_serializadas_string = serializar_vetor(inscricoes_serializadas, numero_inscricoes);
-
-    for (i = 0; i < numero_inscricoes; i++) {
-        free(inscricoes_serializadas[i]);
-    }
-
-    free(inscricoes_serializadas);
-
-    return inscricoes_serializadas_string;
-}
-
-
-/* ========================================================== */
-
-/// DESERIALIZAÇÃO ///
-
-/// Deserialização de tipos primitivos ///
-
-int deserializar_int(char* numero_serializado) {
-    int numero = 0;
-    sscanf(numero_serializado, "i%de", &numero);
-    return numero;
-}
-
-float deserializar_float(char* numero_serializado) {
-    float numero = 0;
-    sscanf(numero_serializado, "f%fe", &numero);
-    return numero;
-}
-
-char* deserializar_string(char* string_serializada) {
-    char* string = malloc(sizeof(char) * (atoi(string_serializada) + 1));
-    sscanf(string_serializada, "%*d:%s", string);
-    return string;
-}
-
-char** deserializar_vetor(char* vetor_serializado) {
-    int numero_elementos = 0;
-    sscanf(vetor_serializado, "l%d&", &numero_elementos);
-
-    char** vetor = malloc(sizeof(char*) * (numero_elementos + 1));
-    vetor[numero_elementos] = NULL;
-
-    char* elemento = strtok(vetor_serializado, "&");
-    int i = 0;
-
-    while (elemento != NULL) {
-        elemento = strtok(NULL, "&");
-        if (elemento != NULL) {
-            vetor[i] = elemento;
-            i++;
-        }
-    }
-
-    return vetor;
-}
-
-/// Deserialização de estruturas ///
-
-t_participante* deserializar_participante(char* participante_serializado) {
-    t_participante* participante = malloc(sizeof(t_participante));
-
-    participante->nome = deserializar_string(participante_serializado);
-    participante_serializado += strlen(participante->nome) + 1;
-
-    participante->identificador = deserializar_int(participante_serializado);
-    participante_serializado += strlen(participante_serializado) + 1;
-
-    participante->email = deserializar_string(participante_serializado);
-    participante_serializado += strlen(participante->email) + 1;
-
-    participante->nif = deserializar_int(participante_serializado);
-    participante_serializado += strlen(participante_serializado) + 1;
-
-    participante->telefone = deserializar_int(participante_serializado);
-    participante_serializado += strlen(participante_serializado) + 1;
-
-    return participante;
-}
-
-t_atividade* deserializar_atividade(char* atividade_serializada) {
-    t_atividade* atividade = malloc(sizeof(t_atividade));
-
-    atividade->identificador = deserializar_int(atividade_serializada);
-    atividade_serializada += strlen(atividade_serializada) + 1;
-
-    atividade->designacao = deserializar_string(atividade_serializada);
-    atividade_serializada += strlen(atividade->designacao) + 1;
-
-    atividade->data = deserializar_string(atividade_serializada);
-    atividade_serializada += strlen(atividade->data) + 1;
-
-    atividade->hora = deserializar_string(atividade_serializada);
-    atividade_serializada += strlen(atividade->hora) + 1;
-
-    atividade->local = deserializar_string(atividade_serializada);
-    atividade_serializada += strlen(atividade->local) + 1;
-
-    atividade->tipo = deserializar_string(atividade_serializada);
-    atividade_serializada += strlen(atividade->tipo) + 1;
-
-    atividade->associacao_estudantes = deserializar_string(atividade_serializada);
-    atividade_serializada += strlen(atividade->associacao_estudantes) + 1;
-
-    atividade->valor = deserializar_float(atividade_serializada);
-    atividade_serializada += strlen(atividade_serializada) + 1;
-
-    return atividade;
-}
-
-t_inscricao* deserializar_inscricao(char* inscricao_serializada) {
-    t_inscricao* inscricao = malloc(sizeof(t_inscricao));
-
-    inscricao->identificador = deserializar_int(inscricao_serializada);
-    inscricao_serializada += strlen(inscricao_serializada) + 1;
-
-    inscricao->id_participante = deserializar_int(inscricao_serializada);
-    inscricao_serializada += strlen(inscricao_serializada) + 1;
-
-    inscricao->id_atividade = deserializar_int(inscricao_serializada);
-    inscricao_serializada += strlen(inscricao_serializada) + 1;
-
-    inscricao->valor_pago = deserializar_float(inscricao_serializada);
-    inscricao_serializada += strlen(inscricao_serializada) + 1;
-
-    inscricao->data = deserializar_string(inscricao_serializada);
-    inscricao_serializada += strlen(inscricao->data) + 1;
-
-    inscricao->hora = deserializar_string(inscricao_serializada);
-    inscricao_serializada += strlen(inscricao->hora) + 1;
-
-    return inscricao;
-}
-
-/// Deserialização de listas ///
-
-t_participante** deserializar_participantes(char* participantes_serializados) {
-    char** participantes_serializados_vetor = deserializar_vetor(participantes_serializados);
-    t_participante** participantes = malloc(sizeof(t_participante*) * (tamanho_vetor_bencode(participantes_serializados) + 1));
-    participantes[tamanho_vetor_bencode(participantes_serializados)] = NULL;
-
-    int i = 0;
-    while (participantes_serializados_vetor[i] != NULL) {
-        participantes[i] = deserializar_participante(participantes_serializados_vetor[i]);
-        i++;
-    }
-
-    return participantes;
-}
-
-t_atividade** deserializar_atividades(char* atividades_serializadas) {
-    char** atividades_serializadas_vetor = deserializar_vetor(atividades_serializadas);
-    t_atividade** atividades = malloc(sizeof(t_atividade*) * (tamanho_vetor_bencode(atividades_serializadas) + 1));
-    atividades[tamanho_vetor_bencode(atividades_serializadas)] = NULL;
-
-    int i = 0;
-    while (atividades_serializadas_vetor[i] != NULL) {
-        atividades[i] = deserializar_atividade(atividades_serializadas_vetor[i]);
-        i++;
-    }
-
-    return atividades;
-}
-
-t_inscricao** deserializar_inscricoes(char* inscricoes_serializadas) {
-    char** inscricoes_serializadas_vetor = deserializar_vetor(inscricoes_serializadas);
-    t_inscricao** inscricoes = malloc(sizeof(t_inscricao*) * (tamanho_vetor_bencode(inscricoes_serializadas) + 1));
-    inscricoes[tamanho_vetor_bencode(inscricoes_serializadas)] = NULL;
-
-    int i = 0;
-    while (inscricoes_serializadas_vetor[i] != NULL) {
-        inscricoes[i] = deserializar_inscricao(inscricoes_serializadas_vetor[i]);
-        i++;
-    }
-
-    return inscricoes;
-}
-
-
-/* ========================================================== */
-/* =                  FUNÇÕES UTILITÁRIAS                   = */
 /* ========================================================== */
 
 static void libertar_memoria(void* ponteiro, ...) {
@@ -745,62 +340,76 @@ static void libertar_memoria(void* ponteiro, ...) {
     va_end(lista);
 }
 
-static void concatenar_strings(char* destino, ...) {
-    va_list lista;
-    va_start(lista, destino);
-
-    char* string = va_arg(lista, char*);
-
-    while (string != NULL) {
-        strcat(destino, string);
-        string = va_arg(lista, char*);
-    }
-
-    va_end(lista);
-}
-
-static char* obter_localizacao_save() {
-    char caminho[1024];
-
-    sprintf(caminho, CAMINHO_CONFIG, nome_utilizador_computador());
-
-    FILE* ficheiro_configuracoes = abrir_ficheiro(caminho, LEITURA);
-    if (ficheiro_configuracoes == NULL) {
-        return NULL;
-    }
-
-    char  localizacao[1024];
-
-    fgets(localizacao, 1024, ficheiro_configuracoes);
-    localizacao[strlen(localizacao) - 1] = '\0';
-
-    fechar_ficheiro(ficheiro_configuracoes);
-    return strdup(localizacao);
-}
-
-static int salvar_localizacao_save(char* localizacao) {
-    char caminho[1024];
-
-    sprintf(caminho, CAMINHO_CONFIG, nome_utilizador_computador());
-
-    FILE* ficheiro_configuracoes = abrir_ficheiro(caminho, ESCRITA);
-    if (ficheiro_configuracoes == NULL) {
-        return 0;
-    }
-
-    fprintf(ficheiro_configuracoes, "%s", localizacao);
-
-    fechar_ficheiro(ficheiro_configuracoes);
-    return 1;
-}
-
-__inline__ static int tamanho_vetor_bencode(char* vetor_serializado) {
+static int tamanho_vetor(void** vetor) {
     int tamanho = 0;
-
-    // O tamanho da lista é indicado depois do 'l' e antes do ':'
-    char* tamanho_serializado = strchr(vetor_serializado, 'l') + 1;
-    tamanho_serializado = strtok(tamanho_serializado, ":");
-    tamanho = atoi(tamanho_serializado);
-
+    while (vetor[tamanho] != NULL) {
+        tamanho++;
+    }
     return tamanho;
+}
+
+static void guardar_participantes(t_estado_programa* estado, FILE* ficheiro) {
+    // Guardar o número de participantes inseridos
+    fwrite(*&estado->numero_participantes_inseridos, sizeof(int), 1, ficheiro);
+
+    // Guardar os participantes
+    for (int i = 0; i < *estado->numero_participantes_inseridos; i++) {
+        fwrite(estado->participantes[i], sizeof(t_participante), 1, ficheiro);
+    }
+}
+
+static void guardar_atividades(t_estado_programa* estado, FILE* ficheiro) {
+    // Guardar o número de atividades inseridas
+    fwrite(*&estado->numero_atividadades_inseridas, sizeof(int), 1, ficheiro);
+
+    // Guardar as atividades
+    for (int i = 0; i < *estado->numero_atividadades_inseridas; i++) {
+        fwrite(estado->atividades[i], sizeof(t_atividade), 1, ficheiro);
+    }
+}
+
+static void guardar_inscricoes(t_estado_programa* estado, FILE* ficheiro) {
+    // Guardar o número de inscrições
+    fwrite(*&estado->numero_de_inscricoes, sizeof(int), 1, ficheiro);
+
+    // Guardar as inscrições
+    for (int i = 0; i < *estado->numero_de_inscricoes; i++) {
+        fwrite(estado->inscricoes[i], sizeof(t_inscricao), 1, ficheiro);
+    }
+}
+
+static void carregar_participantes(t_estado_programa* estado, FILE* ficheiro) {
+    // Carregar o número de participantes inseridos
+    estado->numero_participantes_inseridos = malloc(sizeof(int));
+    fread(estado->numero_participantes_inseridos, sizeof(int), 1, ficheiro);
+
+    // Carregar os participantes
+    for (int i = 0; i < *estado->numero_participantes_inseridos; i++) {
+        estado->participantes[i] = malloc(sizeof(t_participante));
+        fread(estado->participantes[i], sizeof(t_participante), 1, ficheiro);
+    }
+}
+
+static void carregar_atividades(t_estado_programa* estado, FILE* ficheiro) {
+    // Carregar o número de atividades inseridas
+    estado->numero_atividadades_inseridas = malloc(sizeof(int));
+    fread(estado->numero_atividadades_inseridas, sizeof(int), 1, ficheiro);
+
+    // Carregar as atividades
+    for (int i = 0; i < *estado->numero_atividadades_inseridas; i++) {
+        estado->atividades[i] = malloc(sizeof(t_atividade));
+        fread(estado->atividades[i], sizeof(t_atividade), 1, ficheiro);
+    }
+}
+
+static void carregar_inscricoes(t_estado_programa* estado, FILE* ficheiro) {
+    // Carregar o número de inscrições
+    estado->numero_de_inscricoes = malloc(sizeof(int));
+    fread(estado->numero_de_inscricoes, sizeof(int), 1, ficheiro);
+
+    // Carregar as inscrições
+    for (int i = 0; i < *estado->numero_de_inscricoes; i++) {
+        estado->inscricoes[i] = malloc(sizeof(t_inscricao));
+        fread(estado->inscricoes[i], sizeof(t_inscricao), 1, ficheiro);
+    }
 }
