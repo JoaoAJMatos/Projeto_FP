@@ -18,12 +18,17 @@
         getenv("USERNAME")                                      // Obter o nome do utilizador
 #define CAMINHO_CONFIG \
         "C:\\Users\\%s\\AppData\\Local\\Projeto1\\proj.cfg"     // Caminho para o ficheiro de configurações
-#else                                                           // Posix
+#elif defined(__linux__) || defined(__unix__)                   // Linux ou Unix
 #define nome_utilizador_computador() \
         getenv("USER")                                          // Obter o nome do utilizador
 #define CAMINHO_CONFIG \
         "/home/%s/.config/Projeto1/proj.cfg"                    // Caminho para o ficheiro de configurações
-#endif
+#elif defined(__APPLE__)                                        // Mac OS
+#define nome_utilizador_computador() \
+        getenv("USER")                                          // Obter o nome do utilizador
+#define CAMINHO_CONFIG \
+        "/Users/%s/Library/Application Support/Projeto1/proj.cfg" // Caminho para o ficheiro de configurações
+#endif                                                            // _WIN32
 
 #define NUMERO_MAXIMO_DE_PARTICIPANTES 5000
 #define NUMERO_MAXIMO_DE_ATIVIDAES  200
@@ -104,6 +109,9 @@ void  libertar_estado_programa(t_estado_programa*);
 t_estado_programa* carregar_estado_programa(char*);
 int   guardar_estado_programa(char*, t_estado_programa*);
 void  mostrar_estado_programa(t_estado_programa*);
+
+char* obter_caminho_save();
+int   guardar_caminho_save(char*);
 
 
 /// PROCURA ///
