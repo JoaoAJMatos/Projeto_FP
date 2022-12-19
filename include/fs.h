@@ -64,6 +64,7 @@ int   fechar_ficheiro(FILE*);                                                 //
 int   ficheiro_existe(const char*);          // Retorna 1 se o ficheiro existir, 0 caso contrário
 int   caminho_existe(const char*);           // Retorna 1 se o caminho existir, 0 caso contrário
 int   criar_arvore_diretorios(const char*);  // Cria uma árvore de diretórios
+char* caminho_sem_nome_ficheiro(const char*); // Retorna o caminho sem o nome do ficheiro
 char* diretorio_atual();                     // Retorna o diretório atual
 char* extenssao_ficheiro(const char*);       // Retorna a extensão de um ficheiro
 int   numero_linhas_ficheiro(FILE*);         // Retorna o número de linhas de um ficheiro
