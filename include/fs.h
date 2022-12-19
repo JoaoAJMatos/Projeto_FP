@@ -50,46 +50,11 @@
 typedef long long t_tamanho_ficheiro;
 
 
-typedef enum {                                  // CODIGOS DE ERRO PARA A CRIAÇÃO DE UM CAMINHO
-    CAMINHO_OK = 0,                             // O caminho foi criado com sucesso
-    LIMITE_ELEMENTOS_CAMINHO,                   // O caminho tem mais elementos do que o permitido
-    CAMINHO_NAO_EXISTE,                         // O caminho não existe
-} t_erro_fs;
-
-
-/* =========== ESTRUTURAS =========== */
-
-typedef struct {
-    char*  elementos[MAXIMO_NUMERO_ELEMENTOS_CAMINHO]; // Elementos do caminho
-    char*  string_caminho;                             // String com o caminho
-    char*  caminho_absoluto;                           // Caminho absoluto (caminho desde a raiz do disco)
-    int    erro;                                       // Indica se ocorreu um erro ao criar o caminho
-} t_caminho;
-
-
-
-/* ======= UTILITÁRIOS PARA OS CAMINHOS DO FS ======= */
-
-t_caminho* caminho_criar(const char*, ...);               // Cria um caminho a partir de uma sequencia de elementos
-t_caminho* caminho_criar_a_partir_de_string(const char*); // Cria um caminho a partir de uma string
-void caminho_destruir(t_caminho*);                        // Liberta a memória alocada para o caminho
-__inline__ void caminho_mostrar(t_caminho*);              // Mostra o caminho na stdout
-__inline__ void caminho_mostrar_absoluto(t_caminho*);     // Mostra o caminho absoluto na stdout
-char* caminho_relativo_para_absoluto(const char*);        // Retorna o caminho absoluto para um determinado caminho
-int   caminho_obter_erro(t_caminho*, int);                // Retorna o código de erro do caminho e mostra a mensagem de erro se a flag for 1
-
-
 /* ======= I/O FICHEIROS ======= */
 
 // Algumas das funções são antecedidas pelo atributo "unused" para evitar avisos de compilação
 // quando o código é compilado com o GCC em modo de otimização (-O2 ou superior)
 
-__attribute__((unused)) FILE* abrir_ficheiro_leitura(const char*);            // Abre um ficheiro para leitura
-__attribute__((unused)) FILE* abrir_ficheiro_leitura_binaria(const char*);    // Abre um ficheiro para leitura binária
-__attribute__((unused)) FILE* abrir_ficheiro_escrita(const char*);            // Abre um ficheiro para escrita
-__attribute__((unused)) FILE* abrir_ficheiro_escrita_binaria(const char*);    // Abre um ficheiro para escrita em modo binário
-__attribute__((unused)) FILE* abrir_ficheiro_append(const char*);             // Abre um ficheiro para append
-__attribute__((unused)) FILE* abrir_ficheiro_append_binario(const char*);     // Abre um ficheiro para append em modo binário
 FILE* abrir_ficheiro(const char*, char*);                                     // Abre um ficheiro com o modo especificado
 int   fechar_ficheiro(FILE*);                                                 // Fecha um ficheiro
 
@@ -103,6 +68,7 @@ char* diretorio_atual();                     // Retorna o diretório atual
 char* extenssao_ficheiro(const char*);       // Retorna a extensão de um ficheiro
 int   numero_linhas_ficheiro(FILE*);         // Retorna o número de linhas de um ficheiro
 t_tamanho_ficheiro tamanho_ficheiro(const char*);  // Retorna o tamanho de um ficheiro
+char* caminho_relativo_para_absoluto(const char*); // Retorna o caminho absoluto de um caminho relativo
 
 
 #endif //PROJETO_FS_H
