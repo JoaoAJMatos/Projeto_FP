@@ -60,11 +60,15 @@ int caminho_existe(const char* caminho) {
  * @return int
  */
 int criar_arvore_diretorios(const char* caminho) {
-    char *p = caminho_relativo_para_absoluto(caminho);;
+    char *p = caminho_relativo_para_absoluto(caminho);
+    if (caminho_existe(p)) {
+        free(p);
+        return OK;
+    }
 
     while ((p = strchr(p + 1, '/')) != NULL) {
         *p = '\0';
-        if (mkdir(caminho, S_IRWXU) == -1) {
+        if (mkdir(caminho, S_IRWXU) == ERRO) {
             return ERRO;
         }
         *p = '/';
@@ -113,4 +117,14 @@ char* caminho_relativo_para_absoluto(const char* caminho) {
     char* caminho_absoluto = malloc(TAMANHO_MAXIMO_CAMINHO);
     realpath(caminho, caminho_absoluto);
     return caminho_absoluto;
+}
+
+char* caminho_sem_nome_ficheiro(const char* caminho) {
+    char* caminho_sem_nome = malloc(TAMANHO_MAXIMO_CAMINHO);
+    strcpy(caminho_sem_nome, caminho);
+    char* nome_ficheiro = strrchr(caminho_sem_nome, '/');
+    if (nome_ficheiro != NULL) {
+        *nome_ficheiro = '\0';
+    }
+    return caminho_sem_nome;
 }
