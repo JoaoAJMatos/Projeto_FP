@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <curses.h>
 #include <wchar.h>
 #include <locale.h>
 
@@ -101,9 +100,14 @@ typedef struct {
     char*  titulo;                               // Título do formulário de input
     char*  subtitulo;                            // Subtítulo do formulário de input (pode mudar consoante o campo a inserir)
     char** rotulos;                              // Rótulos dos campos a inserir
+    int    numero_campos;                        // Número de campos a inserir
     void*  estrutura_output;                     // Estrutura para guardar os dados inseridos pelo utilizador
     t_tipo_estrutura tipo_estrutura_output;      // Tipo da estrutura para guardar os dados inseridos pelo utilizador
 } t_formulario_input;
+
+
+
+
 
 
 /**
@@ -115,21 +119,35 @@ typedef struct {
 __attribute__((constructor)) int inicializar_stdout();
 
 
+
 /// MENU ///
 t_menu* criar_menu(char*, char*, char**, int, char*, char*, int, int, int, char*, char*, int);
 void desenhar_menu(t_menu*);                                    // Desenhar um menu
 void refresh_menu(t_menu*);                                     // Atualizar o menu
-void desenhar_caixa(int, int, int, int);                        // Desenhar uma caixa com as dimensões especificadas (posição X, posição Y, largura, altura)
 int  ler_opcao_menu(t_menu*);                                   // Ler uma opção do menu
+
+
+
+/// FORMULÁRIOS ///
+t_formulario_input* criar_formulario_input(char*, char*, char**, int, void*, t_tipo_estrutura);
+void desenhar_formulario_input(t_formulario_input*);            // Desenhar um formulário de input
+void refresh_formulario_input(t_formulario_input*);             // Atualizar o formulário de input
+int  ler_formulario_input(t_formulario_input*);                 // Lê os campos do formulário de input e guarda os dados na estrutura
+
+
+/// AÇÕES RÁPIDAS ///
+void prompt(char*, char*, char*, void*, t_tipo_primitivo, char*, char*);   // Mostra um prompt pre definido para o utilizador introduzir dados rapidamente
+void alerta(char*, char*, char*, char*);                                   // Mostra um alerta pre definido ao utilizador
+
 
 
 /// UTILITÁRIOS ///
 t_tamanho_consola* obter_tamanho_consola();                     // Obter o tamanho da consola
+void desenhar_caixa(int, int, int, int);                        // Desenhar uma caixa com as dimensões especificadas (posição X, posição Y, largura, altura)
 void gotoxy(int, int);                                          // Posicionar o cursor na consola
 void imprimir_centrado(char*, t_tamanho_consola*);              // Imprimir um texto centrado na consola
 void pintar_consola(char*);                                     // Pintar a consola com uma cor
 t_resolucao* obter_resolucao_ecra();
-
 
 
 #endif //PROJETO1_STDOUT_H

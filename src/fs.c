@@ -5,141 +5,6 @@
 #include "../include/fs.h"
 
 /* ========================================================== */
-/* =                      PROTÓTIPOS                        = */
-/* ========================================================== */
-
-
-void construir_caminho_final(va_list* argumentos, char* caminho_final);
-int  numero_argumentos_passados(va_list* argumentos);
-
-
-
-
-/* ========================================================== */
-/* =                        CAMINHO                         = */
-/* ========================================================== */
-
-/**
- * @brief Cria um novo caminho a partir de uma sequência de strings.
- * @param raiz
- * @param ...
- * @return t_caminho*
- *
- * @warning O último argumento deve ser NULL/0 para indicar o fim da lista, de modo a evitar
- *          erros de segmentação quando tentamos aceder ao próximo argumento.
- *
- * @example caminho_criar("src", "main.c", NULL)
- */
-t_caminho* caminho_criar(const char* raiz, ...) {
-    va_list argumentos;                                  // Lista de argumentos passados para a função
-    t_caminho* caminho;                                  // Ponteiro para o caminho
-    char* caminho_final;                                 // Caminho final
-
-    caminho = malloc(sizeof(t_caminho));            // Alocar memória para a estrutura do caminho
-    caminho_final = malloc(TAMANHO_MAXIMO_CAMINHO); // Alocar memória para o caminho final
-    strcat(caminho_final, raiz);                         // Adicionar a raiz ao caminho final
-
-    va_start(argumentos, raiz);
-    if (numero_argumentos_passados(&argumentos) > MAXIMO_NUMERO_ELEMENTOS_CAMINHO) {
-        caminho->erro = LIMITE_ELEMENTOS_CAMINHO;
-        return caminho;
-    }
-    construir_caminho_final(&argumentos, caminho_final);
-    va_end(argumentos);
-
-    caminho->caminho_absoluto = caminho_relativo_para_absoluto(caminho_final);
-    caminho->string_caminho = caminho_final;
-    if (!caminho_existe(caminho->caminho_absoluto)) {
-        caminho->erro = CAMINHO_NAO_EXISTE;
-        return caminho;
-    }
-
-    caminho->erro = CAMINHO_OK;
-    return caminho;
-}
-
-
-/**
- * @brief Cria um novo caminho a partir de uma string.
- * @param string_caminho
- * @return t_caminho*
- */
-t_caminho* criar_caminho_a_partir_de_string(const char* string_caminho) {
-    t_caminho* caminho = malloc(sizeof(t_caminho));
-    caminho->string_caminho = malloc(TAMANHO_MAXIMO_CAMINHO);
-    strcpy(caminho->string_caminho, string_caminho);
-    caminho->caminho_absoluto = caminho_relativo_para_absoluto(string_caminho);
-
-    if (!caminho_existe(caminho->caminho_absoluto)) {
-        caminho->erro = CAMINHO_NAO_EXISTE;
-        return caminho;
-    }
-
-    caminho->erro = CAMINHO_OK;
-    return caminho;
-}
-
-
-/**
- * @brief Liberta a memória alocada pelo caminho.
- * @param caminho
- */
-void caminho_destruir(t_caminho* caminho) {
-    free(caminho->string_caminho);
-    free(caminho->caminho_absoluto);
-    free(caminho);
-}
-
-
-__inline__ void caminho_mostrar(t_caminho* caminho) {
-    printf("%s", caminho->string_caminho);
-}
-
-__inline__ void caminho_mostrar_absoluto(t_caminho* caminho) {
-    printf("%s", caminho->caminho_absoluto);
-}
-
-
-/**
- * @brief Devolve o último erro e mostra a mensagem de erro correspondente se a flag verbose estiver ativa
- * @param caminho
- * @return int
- */
-int caminho_obter_erro(t_caminho* caminho, int verbose) {
-    if (verbose) {
-        switch (caminho->erro) {
-            case CAMINHO_OK:
-                printf("Caminho OK\n");
-                break;
-            case CAMINHO_NAO_EXISTE:
-                printf("Caminho não existe\n");
-                break;
-            case LIMITE_ELEMENTOS_CAMINHO:
-                printf("Limite de elementos do caminho excedido\n");
-                break;
-            default:
-                printf("Erro desconhecido\n");
-                break;
-        }
-    }
-    return caminho->erro;
-}
-
-
-/**
- * @brief Converte um caminho relativo para um caminho absoluto
- * @param caminho_relativo
- * @return char*
- */
-char* caminho_relativo_para_absoluto(const char* caminho_relativo) {
-    char* caminho_absoluto = malloc(TAMANHO_MAXIMO_CAMINHO);
-    realpath(caminho_relativo, caminho_absoluto);
-    return caminho_absoluto;
-}
-
-
-
-/* ========================================================== */
 /* =                     I/O FICHEIROS                      = */
 /* ========================================================== */
 
@@ -159,9 +24,6 @@ int fechar_ficheiro(FILE* ficheiro) {
     }
     return OK;
 }
-
-
-
 
 
 /* ========================================================== */
@@ -198,11 +60,15 @@ int caminho_existe(const char* caminho) {
  * @return int
  */
 int criar_arvore_diretorios(const char* caminho) {
-    char *p = caminho_relativo_para_absoluto(caminho);;
+    char *p = caminho_relativo_para_absoluto(caminho);
+    if (caminho_existe(p)) {
+        free(p);
+        return OK;
+    }
 
     while ((p = strchr(p + 1, '/')) != NULL) {
         *p = '\0';
-        if (mkdir(caminho, S_IRWXU) == -1) {
+        if (mkdir(caminho, S_IRWXU) == ERRO) {
             return ERRO;
         }
         *p = '/';
@@ -247,38 +113,18 @@ t_tamanho_ficheiro tamanho_ficheiro(const char* caminho) {
     return st.st_size;
 }
 
-
-
-/* ========================================================== */
-/* =                      UTILITÁRIOS                       = */
-/* ========================================================== */
-
-/**
- * @breif Produz o caminho final através dos argumentos passados para a construção do caminho.
- * @param argumentos
- * @param caminho_final
- */
-void construir_caminho_final(va_list* argumentos, char* caminho_final) {
-    const char* elemento_caminho;   // Elemento do caminho
-
-    while ((elemento_caminho = va_arg(*argumentos, const char*)) != NULL) {  // Enquanto houver elementos na lista de argumentos
-        strcat(caminho_final, SEPARADOR_DIRETORIO);                          // Adicionar o separador de diretório ao caminho final
-        strcat(caminho_final, elemento_caminho);                             // Adicionar o elemento ao caminho final
-    }
+char* caminho_relativo_para_absoluto(const char* caminho) {
+    char* caminho_absoluto = malloc(TAMANHO_MAXIMO_CAMINHO);
+    realpath(caminho, caminho_absoluto);
+    return caminho_absoluto;
 }
 
-/**
- * @brief Devolve o numero de elementos contidos numa lista de argumentos.
- * @param argumentos
- * @return int
- */
-int numero_argumentos_passados(va_list* argumentos) {
-    int num_args = 0;
-    va_list args_copy;
-    va_copy(args_copy, *argumentos);
-    while (va_arg(args_copy, const char*) != NULL) {
-        num_args++;
+char* caminho_sem_nome_ficheiro(const char* caminho) {
+    char* caminho_sem_nome = malloc(TAMANHO_MAXIMO_CAMINHO);
+    strcpy(caminho_sem_nome, caminho);
+    char* nome_ficheiro = strrchr(caminho_sem_nome, '/');
+    if (nome_ficheiro != NULL) {
+        *nome_ficheiro = '\0';
     }
-    va_end(args_copy);
-    return num_args;
+    return caminho_sem_nome;
 }
