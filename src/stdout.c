@@ -11,14 +11,16 @@
 /* =                      PROTÓTIPOS                        = */
 /* ========================================================== */
 
-void escrever_caixa_do_menu(t_menu* menu);                  // Escreve a caixa que envolve o menu
-void escrever_titulo_do_menu(t_menu* menu);                 // Escreve o título do menu
-void escrever_opcoes_do_menu(t_menu* menu);                 // Escreve as opções do menu
-void escrever_caixa_de_input(t_menu* menu);                 // Escreve a caixa que envolve o input da opcao do menu
-int  obter_tamanho_do_maior_item_do_menu(t_menu* menu);     // Obtém o tamanho do maior item do menu
-void limpar_caixa_de_input(t_menu* menu);                   // Limpa a caixa que envolve o input da opcao do menu
-void escrever_mensagem_de_erro(t_menu* menu);               // Escreve a mensagem de erro de input no menu
-
+static void escrever_caixa_do_menu(t_menu* menu);                  // Escreve a caixa que envolve o menu
+static void escrever_titulo_do_menu(t_menu* menu);                 // Escreve o título do menu
+static void escrever_opcoes_do_menu(t_menu* menu);                 // Escreve as opções do menu
+static void escrever_caixa_de_input(t_menu* menu);                 // Escreve a caixa que envolve o input da opcao do menu
+static int  obter_tamanho_do_maior_item_do_menu(t_menu* menu);     // Obtém o tamanho do maior item do menu
+static void limpar_caixa_de_input(t_menu* menu);                   // Limpa a caixa que envolve o input da opcao do menu
+static void escrever_mensagem_de_erro(t_menu* menu);               // Escreve a mensagem de erro de input no menu
+static void escrever_conteudo_do_prompt(int, int, char*, char*, char*);    // Escreve o conteúdo do prompt
+static void ler_input_do_prompt(void*, t_tipo_primitivo);          // Lê o input do prompt e guarda-a na variável passada por referência
+static void esperar_input_do_utilizador(char*, int, int);          // Espera que o utilizador pressione uma tecla para continuar
 
 
 
@@ -208,10 +210,7 @@ void desenhar_caixa(int posicao_x, int posicao_y, int largura, int altura)
 }
 
 
-// TODO: Corrigir a funcao de input
-// TODO: Corrgir mensagem de erro
-// TODO: Adicionar funcao para rescrever por completo a caixa de input com a mensagem de erro
-// TODO: Adicionar suporte para cores
+
 int ler_opcao_menu(t_menu* menu) {
     int opcao = 0;
 
@@ -241,6 +240,117 @@ void pintar_consola(char* cor) {
 }
 
 
+
+/* ========================================================== */
+/* =                     FORMULÁRIOS                        = */
+/* ========================================================== */
+
+
+t_formulario_input* criar_formulario_input(char* titulo, char* subtitulo, char** rotulos, int numero_campos, \
+                                           void* estrutura_outpur, t_tipo_estrutura tipo_estrutura)
+{
+    t_formulario_input* formulario = (t_formulario_input*) malloc(sizeof(t_formulario_input));
+    formulario->titulo = titulo;
+    formulario->subtitulo = subtitulo;
+    formulario->rotulos = rotulos;
+    formulario->numero_campos = numero_campos;
+    formulario->estrutura_output = estrutura_outpur;
+    formulario->tipo_estrutura_output = tipo_estrutura;
+
+    return formulario;
+}
+
+
+void desenhar_formulario_input(t_formulario_input* formulario) {
+    limpar_ecra();
+    t_tamanho_consola *tamanho_consola = obter_tamanho_consola();
+
+    // Escrever caixa do formulário
+    desenhar_caixa(2, 1, tamanho_consola->largura - 2, tamanho_consola->altura);
+
+    // Escrever título do formulário
+    gotoxy((tamanho_consola->largura - strlen(formulario->titulo)) / 2, 5);
+    printf("%s", formulario->titulo);
+
+    // Escrever subtitulo do formulário
+    gotoxy((tamanho_consola->largura - strlen(formulario->subtitulo)) / 2, 7);
+    printf("%s", formulario->subtitulo);
+
+    // Escrever campos do formulário
+    int posicao_y = 10;
+    for (int i = 0; i < formulario->numero_campos; i++) {
+        gotoxy(5, posicao_y);
+        printf("%s", formulario->rotulos[i]);
+        gotoxy(5, posicao_y + 1);
+        printf("____________________________________________________________");
+        posicao_y += 3;
+    }
+}
+
+
+
+/* ========================================================== */
+/* =                    AÇÕES RÁPIDAS                       = */
+/* ========================================================== */
+
+void prompt(char* mensagem, char* subtitulo, char* dica, void* variavel_output, t_tipo_primitivo tipo_variavel_output, char* cor_texto, char* cor_fundo)
+{
+    int comprimento_do_maior_elemento = 0;
+    int tamanho_mensagem = strlen(mensagem);
+    int tamanho_subtitulo = strlen(subtitulo);
+    comprimento_do_maior_elemento = tamanho_mensagem > tamanho_subtitulo ? tamanho_mensagem : tamanho_subtitulo;
+
+    t_tamanho_consola *tamanho_consola = obter_tamanho_consola();
+    int posicao_x = (tamanho_consola->largura - comprimento_do_maior_elemento) / 2;
+    int posicao_y = (tamanho_consola->altura - 6) / 2;
+
+    definir_cor_texto(cor_texto);
+    definir_cor_fundo(cor_fundo);
+
+    // Escrever caixa do formulário
+    desenhar_caixa(posicao_x, posicao_y, comprimento_do_maior_elemento + 4, 8);
+
+    // Escrever o conteudo da caixa do prompt
+    escrever_conteudo_do_prompt(posicao_x, posicao_y, mensagem, subtitulo, dica);
+
+    // Ler input do utilizador
+    gotoxy(posicao_x + strlen(dica) + 5, posicao_y + 5);
+    ler_input_do_prompt(variavel_output, tipo_variavel_output);
+
+    limpar_formatacao();
+}
+
+
+void alerta(char* titulo, char* alerta, char* cor_texto, char* cor_fundo) {
+    int comprimento_do_maior_elemento = 0;
+    int tamanho_titulo = strlen(titulo);
+    int tamanho_alerta = strlen(alerta);
+    comprimento_do_maior_elemento = tamanho_titulo > tamanho_alerta ? tamanho_titulo : tamanho_alerta;
+
+    t_tamanho_consola *tamanho_consola = obter_tamanho_consola();
+    int posicao_x = (tamanho_consola->largura - comprimento_do_maior_elemento) / 2;
+    int posicao_y = (tamanho_consola->altura - 6) / 2;
+
+    definir_cor_texto(cor_texto);
+    definir_cor_fundo(cor_fundo);
+
+    // Escrever caixa do formulário
+    desenhar_caixa(posicao_x, posicao_y, comprimento_do_maior_elemento + 4, 8);
+
+    // Escrever o conteudo da caixa do prompt
+    gotoxy(posicao_x + 2, posicao_y + 1);
+    printf("%s", titulo);
+
+    esperar_input_do_utilizador(alerta, posicao_x + 2, posicao_y + 6);
+
+    limpar_formatacao();
+}
+
+
+
+
+
+
 /* ========================================================== */
 /* =                      UTILITÁRIOS                       = */
 /* ========================================================== */
@@ -249,7 +359,7 @@ void pintar_consola(char* cor) {
  * @brief Escreve a caixa que envolve o menu
  * @param menu
  */
-void escrever_caixa_do_menu(t_menu* menu) {
+static void escrever_caixa_do_menu(t_menu* menu) {
     int largura = menu->largura;
     int altura = menu->altura;
     int posicao_x = menu->posicao_x;
@@ -263,7 +373,7 @@ void escrever_caixa_do_menu(t_menu* menu) {
  * @brief Escreve o título do menu
  * @param menu
  */
-void escrever_titulo_do_menu(t_menu* menu) {
+static void escrever_titulo_do_menu(t_menu* menu) {
     desenhar_caixa(menu->posicao_x, menu->posicao_y - 2, menu->largura, 3);
 
     gotoxy(menu->posicao_x + (menu->largura - strlen(menu->titulo)) / 2, menu->posicao_y - 3);
@@ -283,7 +393,7 @@ void escrever_titulo_do_menu(t_menu* menu) {
  * @brief Escreve as opções do menu
  * @param menu
  */
-void escrever_opcoes_do_menu(t_menu* menu) {
+static void escrever_opcoes_do_menu(t_menu* menu) {
     int posicao_x_opcoes = menu->posicao_x + (menu->largura - 2) / 2;
     int posicao_y_opcoes = menu->posicao_y + (menu->altura - 2) / 4;
     for (int i = 0; i < menu->numero_opcoes; i++) {
@@ -296,7 +406,7 @@ void escrever_opcoes_do_menu(t_menu* menu) {
  * @brief Escreve a caixa onde o utilizador vai escrever a sua opção
  * @param menu
  */
-void escrever_caixa_de_input(t_menu* menu) {
+static void escrever_caixa_de_input(t_menu* menu) {
     gotoxy(menu->posicao_x, menu->posicao_y + menu->altura);
 
     desenhar_caixa(menu->posicao_x, menu->posicao_y + menu->altura, menu->largura, 3);
@@ -320,7 +430,7 @@ void escrever_caixa_de_input(t_menu* menu) {
  * @param menu
  * @return int
  */
-int obter_tamanho_do_maior_item_do_menu(t_menu* menu) {
+static int obter_tamanho_do_maior_item_do_menu(t_menu* menu) {
     int tamanho_maior_item = 0;
     for (int i = 0; i < menu->numero_opcoes; i++) {
         if (strlen(menu->opcoes[i]) > tamanho_maior_item) {
@@ -330,14 +440,14 @@ int obter_tamanho_do_maior_item_do_menu(t_menu* menu) {
     return tamanho_maior_item;
 }
 
-void limpar_caixa_de_input(t_menu* menu) {
+static void limpar_caixa_de_input(t_menu* menu) {
     gotoxy(menu->posicao_x + strlen(menu->mensagem) + 5, menu->posicao_y + menu->altura + 1);
     for (int i = 0; i < menu->largura - strlen(menu->mensagem) - 6; i++) {
         printf(" ");
     }
 }
 
-void escrever_mensagem_de_erro(t_menu* menu) {
+static void escrever_mensagem_de_erro(t_menu* menu) {
     limpar_caixa_de_input(menu);
 
     // Posicionar o cursor depois da linha separadora da caixa de input e escrever a mensagem
@@ -351,4 +461,47 @@ void escrever_mensagem_de_erro(t_menu* menu) {
     // Limpar a mensagem de erro e posicionar o cursor para a nova input
     limpar_caixa_de_input(menu);
     gotoxy(menu->posicao_x + strlen(menu->mensagem) + 6, menu->posicao_y + menu->altura + 1);
+}
+
+
+static void escrever_conteudo_do_prompt(int posicao_x, int posicao_y, char* mensagem, char* subtitulo, char* dica) {
+    // Escrever mensagem no topo da caixa
+    gotoxy(posicao_x + 2, posicao_y + 1);
+    printf("%s", mensagem);
+
+    // Escrever subtitulo
+    gotoxy(posicao_x + 2, posicao_y + 3);
+    printf("%s", subtitulo);
+
+    // Escrever dica no centro da caixa
+    gotoxy(posicao_x + 2, posicao_y + 5);
+    printf("(%s):", dica);
+}
+
+
+
+static void ler_input_do_prompt(void* variavel_output, t_tipo_primitivo tipo_variavel_output) {
+    switch (tipo_variavel_output) {
+        case INT:
+            scanf("%d", (int*) variavel_output);
+            break;
+        case FLOAT:
+            scanf("%f", (float*) variavel_output);
+            break;
+        case CHAR:
+            scanf(" %c", (char*) variavel_output);
+            break;
+        case STRING:
+            scanf("%s", (char*) variavel_output);
+            break;
+    } // Sem caso default para que o compilador nos avise de casos não tratados
+}
+
+
+static void esperar_input_do_utilizador(char* mensagem, int x, int y) {
+    gotoxy(x, y);
+    printf("%s", mensagem);
+
+    fflush(stdin);
+    getchar();
 }
