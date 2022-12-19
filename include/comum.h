@@ -6,15 +6,11 @@
 #define PROJETO1_COMUM_H
 
 #if defined(__aarch64__)
-#define __inline__ __attribute__((always_inline)) // A keyword "inline" parecia causar problemas com o GCC em minha
+#define __inline__ __attribute__((always_inline)) // A keyword "inline" parecia causar problemas com o GCC na minha
                                                   // máquina arm64, então eu apenas redefino a constante aqui
 #else
 #define __inline__ inline
 #endif // defined(__aarch64__)
-
-
-#undef OK                                         // Retirar a definição da constante OK, para não entrar em conflito
-                                                  // com a constante definida na biblioteca curses.h
 
 /**
  * Enumeração para para os diferentes estados de uma função.
@@ -24,11 +20,12 @@ enum {
     OK = 0
 };
 
+// ======================================================================================================== //
 
 /**
  * Esta enumeração é usada para representar os tipos de estruturas suportadas pelo programa.
  *
- * Os valores são usados pela função formulário_input() (descrita no ficheiro sistema/stdout.h)
+ * Os valores são usados pela função formulário_input() (descrita no ficheiro include/stdout.h)
  * para decidir como deve ser interpretado o void* passado como argumento.
  * O void* passado como argumento deve ser um ponteiro para uma das estruturas suportadas.
  *
@@ -39,6 +36,26 @@ typedef enum {
     ATIVIDADE,
     INSCRICAO
 } t_tipo_estrutura;
+
+
+/**
+ * Esta enumeração é usada por motivos semelhantes à enumeração t_tipo_estrutura.
+ *
+ * É usada pela função prompt() de modo a decidir como deve ser interpretado o void* passado como argumento.
+ */
+typedef enum {
+    INT,
+    FLOAT,
+    STRING, // Não é um dado primitivo, mas está aqui na mesma
+    CHAR
+} t_tipo_primitivo;
+
+// NOTA: estas definições de enumerações poderiam ter sido evitadas se estivessemos a usar C++, recorrendo a templates e
+//       ao meta-programming. Mas como usamos C, não há outra maneira de fazer isto que me venha à cabeça.
+//       A única forma que me ocorre é mesmo definir os tipos de dados que queremos suportar e depois fazer um switch
+//       case para cada um deles. Em que em cada caso, o void* passado como argumento é convertido e tratado consoante
+//       o tipo de dados que informamos. Esta solução é muito mais verbosa e menos elegante do que meta-programming e templates,
+//       porém temos que nos contentar com o C xD.
 
 
 #endif //PROJETO1_COMUM_H
