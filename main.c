@@ -1,76 +1,48 @@
+/**
+ * @file main.c
+ * @author Joao Matos (github.com/JoaoAJMatos) & Rúben Lisboa (github.com/Lisboa14)
+ * @version 1.0
+ * @date 2022-12-18
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
+// TODO: Acabar os formulários
+// TODO: Fazer testes do processo de salvar/carregar a aplicação, incluindo as funções do fs que são usadas
+
 #include <stdio.h>
-#include <assert.h>
 
-#include "sistema/fs.h"
-#include "sistema/stdout.h"
+#include "include/stdout.h"
+#include "include/app.h"
 
-#define NUMERO_MAXIMO_DE_ESTUDANTES 5000
-#define NUMERO_MAXIMO_DE_ATIVIDAES  200
-#define NUMERO_MAXIMO_DE_INSCRICOES 10000
-
-
-/* ================== ESTRUTURAS ================== */
-
-typedef struct {
-   int   identificador;
-   char* nome;
-   char* escola;
-   int   nif;
-   char* email;
-   int   telefone;
-} t_participante;
-
-
-typedef struct {
-    int identificador;
-    char* designacao;
-    char* data;
-    char* hora;
-    char* local;
-    char* tipo;
-    char* associacao_estudantes;
-    float valor;
-} t_atividade;
-
-
-typedef struct {
-    int identificador;
-    int id_participante;
-    int id_atividade;
-    float valor_pago;
-    char* data;
-    char* hora;
-} t_inscricao;
+#define COR_TEXTO_PROGRAMA COR_TEXTO_BRANCO
+#define COR_FUNDO_PROGRAMA COR_FUNDO_AZUL
 
 
 
-/* ================== PROTÓTIPOS ================== */
+/* ========================================================== */
+/* =                      PROTÓTIPOS                        = */
+/* ========================================================== */
 
-/// Funções básicas de Input ///
-int   ler_numero_inteiro(int, int, const char*);
-float ler_numero_real(float, float, const char*);
-char* ler_string(const char*, int);
+void inicializar_vetores(t_participante**, t_atividade**, t_inscricao**);
+char confirmar_saida(char*, char*, char*);
+void menu_participantes(t_participante**, t_atividade**, t_inscricao**);
 
-/// Funções de gestão de participantes ///
-t_participante* participante_criar(int, char*, char*, int, char*, int);
-void participante_apagar(t_participante*);
-void participante_editar(t_participante*);
-__inline__ void participante_mostrar(t_participante*);
+/* ========================================================== */
 
-/// Funções de gestão de atividades ///
-t_atividade* atividade_criar(int, char*, char*, char*, char*, char*, char*, float);
-void atividade_apagar(t_atividade*);
-void atividade_editar(t_atividade*);
-__inline__ void atividade_mostrar(t_atividade*);
+int carregar_dados(char* caminho, t_estado_programa*);
 
-/// Funções de gestão de inscrições ///
-t_inscricao* inscricao_criar(int, int, int, float, char*, char*);
-void inscricao_apagar(t_inscricao*);
-void inscricao_editar(t_inscricao*);
-__inline__ void inscricao_mostrar(t_inscricao*);
+/* ========================================================== */
+
+void inserir_participante(t_estado_programa*);
+void inserir_atividade(t_estado_programa*);
+void inserir_inscricao(t_estado_programa*);
+
+/* ========================================================== */
 
 
-
+/// POSSIVEIS OPCOES DO MENU PRINCIPAL ///
 typedef enum {
     GESTAO_PARTICIPANTES = 1,
     GESTAO_ATIVIDADES,
@@ -80,51 +52,164 @@ typedef enum {
 } t_opcao_menu_principal;
 
 
-/* ================== FUNÇÕES ================== */
+
+
+/* ========================================================== */
+/* =                         MAIN                           = */
+/* ========================================================== */
 
 int main() {
-    t_opcao_menu_principal opcao;
+    /// DECLARAÇÃO DE VARIÁVEIS  ///
+    char caminho_save[1024];            // Caminho para o ficheiro onde o estado do programa será guardado
 
-    // Definir opcoes do menu principal
-    char* opcoes_menu[] = {
-            "1. Gestão de Participantes",
-            "2. Gestão de Atividades",
-            "3. Gestão de Inscrições",
-            "4. Estatísticas",
-            "5. Sair"
-    };
+    t_opcao_menu_principal opcao;       // Opção escolhida no menu principal
+    int numero_de_participantes = 0;    // Número de participantes registados
+    int numero_de_atividades = 0;       // Número de atividades registadas
+    int numero_de_inscricoes = 0;       // Número de inscrições registadas
+    char confirmacao_saida;             // Confirmar a saída do programa
 
-    // Criar um menu com as seguintes opções
-    t_menu* menu = criar_menu("PROJETO FP",        // Titulo do menu
-                              "Menu Principal",    // Subtitulo do menu
-                              opcoes_menu, 5,      // Opcoes do menu e numero de opcoes
-                              "Insira a opção",    // Mensagem de pedido de input
-                              "Opção inválida",    // Mensagem de erro
-                              40, 20, 1,           // Dimensoes do menu e flag de autoajuste
-                              COR_TEXTO_BRANCO,    // Cor do texto
-                              COR_FUNDO_AZUL,      // Cor de fundo
-                              1);                  // Flag de pintura do fundo da consola com a cor de fundo
+    t_menu* menu_principal;
+    t_menu* menu_participantes;
 
-    // Desenhar o menu criado
-    desenhar_menu(menu);
+    t_participante* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];    // Vetor de participantes
+    t_atividade* atividades[NUMERO_MAXIMO_DE_ATIVIDAES];              // Vetor de atividades
+    t_inscricao* inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];             // Vetor de inscrições
 
-    // Ler a opcao escolhida
-    opcao = ler_opcao_menu(menu);
 
-    switch (opcao) {
-        case GESTAO_PARTICIPANTES: {
-            limpar_ecra();
-            printf("Ola\n");
-        }
-        case GESTAO_ATIVIDADES:
-            break;
-        case GESTAO_INSCRICOES:
-            break;
-        case GESTAO_PAGAMENTOS:
-            break;
-        case SAIR:
-            break;
-    }   // Sem caso default para que o compilador avise sobre casos não tratados. (Ver notas de desenvolvimento no ficheiro README.md)
+    /// MENUS ///
+    // Definir opções para os menus
+    char* opcoes_menu[] = {"1. Gestão de Participantes","2. Gestão de Atividades","3. Gestão de Inscrições","4. Estatísticas","5. Sair"};
+    char* opcoes_menu_participantes[] = {"1. Criar Participante","2. Editar Participante","3. Eliminar Participante","4. Mostrar Participantes","5. Voltar"};
+
+    // Criar menus
+    menu_principal = criar_menu("PROJETO FP", "Menu Principal", opcoes_menu, 5, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+    menu_participantes = criar_menu("PROJETO FP", "Gestão de Participantes", opcoes_menu_participantes, 5, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+
+
+    /// FORMULÁRIOS ///
+    t_formulario_input* formulario_participante;
+    t_formulario_input* formulario_atividade;
+    char* campos_formulario_participante[] = {"Identificador", "Nome","Escola","NIF","Email","Telefone"};
+    char* campos_formulario_atividade[]    = {"Identificador", "Designação","Data","Hora","Local","Tipo", "Associacao de Estudantes", "Valor"};
+
+    // Criar formulários
+    t_participante participante;
+    t_atividade atividade;
+    formulario_participante = criar_formulario_input("Gestão de Participantes", "Insira os dados do novo participante", campos_formulario_participante, 6, &participante, PARTICIPANTE);
+    formulario_atividade    = criar_formulario_input("Gestão de Atividades", "Insira os dados da nova atividade", campos_formulario_atividade, 8, &participante, ATIVIDADE);
+
+    /// ESTADO DO PROGRAMA  ///
+    // Criação do estado do programa
+    //
+    // Este estado é partilhado entre funções, de modo que possam aceder e consultar o estado atual
+    // do programa.
+    t_estado_programa* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+
+    pintar_consola(COR_FUNDO_PROGRAMA);
+
+    desenhar_formulario_input(formulario_atividade);
+    ler_formulario_input(formulario_atividade, estado_programa);
+    limpar_ecra();
+    mostrar_atividade(&atividade);
+    fflush(stdin);
+    getchar();
+
+    /// CARREGAR O ESTADO DO PROGRAMA DO DISCO  ///
+    if (carregar_dados(caminho_save, estado_programa) < 0) {
+        printf("Erro ao carregar os dados do disco.\n");
+        return ERRO;
+    }
+
+    // Criar um participante
+    participantes[0] = criar_participante(123, "Joao", "Escola Secundaria de Algueirao", 123456789, "mail", 912345678);
+    numero_de_participantes++;
+    mostrar_estado_programa(estado_programa);
+    fflush(stdin);
+    getchar();
+
+
+    /// LOOP PRINCIPAL DO PROGRAMA  ///
+    do {
+        // Desenhar o menu principal
+        desenhar_menu(menu_principal);
+
+        // Ler a opcao escolhida
+        opcao = ler_opcao_menu(menu_principal);
+
+        switch (opcao) {
+            case GESTAO_PARTICIPANTES: {
+                desenhar_menu(menu_participantes);
+                opcao = ler_opcao_menu(menu_participantes);
+                break;
+            }
+            case GESTAO_ATIVIDADES:
+
+                break;
+            case GESTAO_INSCRICOES:
+                limpar_ecra();
+                alerta("Gestão de Inscrições", "Ainda não implementado", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+                break;
+            case GESTAO_PAGAMENTOS:
+                limpar_ecra();
+                alerta("Gestão de Pagamentos", "Ainda não implementado", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+                break;
+            case SAIR:
+                confirmacao_saida = confirmar_saida("Tem a certeza que pretende sair?", "", "S/N");
+
+        }   // Sem caso default para que o compilador avise sobre casos não tratados. (Ver notas de desenvolvimento no ficheiro README.md)
+    } while (confirmacao_saida != 'S');
+
+    if (guardar_estado_programa("save.dat", estado_programa) < 0) {
+        printf("Erro ao guardar o estado do programa.\n");
+        return ERRO;
+    }
+
+    libertar_estado_programa(estado_programa);
+    limpar_ecra();
+    return OK;
+}
+
+
+/* ========================================================== */
+/* =                        FUNÇÕES                         = */
+/* ========================================================== */
+
+
+void inicializar_vetores(t_participante** participantes, t_atividade** atividades, t_inscricao** inscricoes) {
+    // Inicializar os arrays de participantes, atividades e inscrições
+    for (int i = 0; i < NUMERO_MAXIMO_DE_PARTICIPANTES; i++) participantes[i] = NULL;
+    for (int i = 0; i < NUMERO_MAXIMO_DE_ATIVIDAES; i++) atividades[i] = NULL;
+    for (int i = 0; i < NUMERO_MAXIMO_DE_INSCRICOES; i++) inscricoes[i] = NULL;
+}
+
+
+char confirmar_saida(char* mensagem, char* subtitulo, char* dica) {
+    char confirmacao = 0;
+    do {
+        limpar_ecra();
+        prompt(mensagem, subtitulo, dica, &confirmacao, CHAR, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        confirmacao = toupper(confirmacao);
+    } while (confirmacao != 'S' && confirmacao != 'N');
+
+    return confirmacao;
+}
+
+
+int carregar_dados(char* caminho_save, t_estado_programa* estado_programa) {
+    char caminho[1024];
+    caminho_save = obter_caminho_save();
+
+    if (ficheiro_existe(caminho_save)) {                           // Verificar se o ficheiro de save existe
+        estado_programa = carregar_estado_programa(caminho_save);  // Se existir, carregar o estado do programa
+        return OK;
+    }
+
+    // Se for a primeira vez que o utilizador inicia o programa, o programa deve perguntar onde é que o utilizador
+    // pretende guardar os dados do programa.
+    prompt("Primeira entrada no programa detetada", "Introduza o caminho relativo/absoluto para o ficheiro de save", "Caminho", caminho, STRING, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+
+    if (guardar_caminho_save(caminho) < 0) return ERRO;
+    inicializar_vetores(estado_programa->participantes, estado_programa->atividades, estado_programa->inscricoes);
 
     return OK;
 }
