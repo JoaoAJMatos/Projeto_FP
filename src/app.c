@@ -152,6 +152,8 @@ t_inscricao* criar_inscricao(int identificador, int id_participante, int id_ativ
     }
 
     inscricao->valor_pago = atividades[indice_procura]->valor;
+    inscricao->data = obter_data_atual();
+    inscricao->hora = obter_hora_atual_completa();
 
     return inscricao;
 }
