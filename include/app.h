@@ -9,8 +9,8 @@
 #include <stdio.h>
 
 #include "fs.h"                  // Para salvar os dados no disco
-#include "stdout.h"              // Para interagir com o utilizador
 #include "comum.h"               // Para definir os tipos de dados
+#include "data_hora.h"           // Para obter a data e hora atual
 
 
 #if defined(_WIN32) || defined(_WIN64)                          // Windows

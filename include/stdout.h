@@ -12,12 +12,15 @@
 #include <locale.h>
 
 #include "comum.h"
+#include "app.h"
 #include "formatacao_texto.h"
+#include "data_hora.h"
 
 #if defined(_WIN32) || defined(_WIN64)          // Windows
 #include <windows.h>                            // Para interagir com a API do Windows
 #else                                           // Posix
 #include <sys/ioctl.h>                          // Para obter o tamanho da janela
+#include <curses.h>
 #endif                                          // _WIN32
 
 #define ESCAPE_CODE_LIMPAR_CONSOLA \
@@ -35,8 +38,8 @@
 #define definir_cor_fundo(cor) \
     definir_cor_texto(cor)
 
-#define ALTURA_MINIMA_RECOMENDADA 24
-#define LARGURA_MINIMA_RECOMENDADA 80
+#define ALTURA_MINIMA_RECOMENDADA 30
+#define LARGURA_MINIMA_RECOMENDADA 90
 
 
 #define CANTO_SUPERIOR_ESQUERDO "╔"
@@ -106,10 +109,6 @@ typedef struct {
 } t_formulario_input;
 
 
-
-
-
-
 /**
  * Esta função com o atributo constructor é executada sempre que o programa é iniciado, antes da função main.
  * Verifica o tamanho da consola e ajusta o tamanho do buffer de output para que o programa não tenha problemas.
@@ -123,7 +122,6 @@ __attribute__((constructor)) int inicializar_stdout();
 /// MENU ///
 t_menu* criar_menu(char*, char*, char**, int, char*, char*, int, int, int, char*, char*, int);
 void desenhar_menu(t_menu*);                                    // Desenhar um menu
-void refresh_menu(t_menu*);                                     // Atualizar o menu
 int  ler_opcao_menu(t_menu*);                                   // Ler uma opção do menu
 
 
@@ -131,8 +129,7 @@ int  ler_opcao_menu(t_menu*);                                   // Ler uma opç�
 /// FORMULÁRIOS ///
 t_formulario_input* criar_formulario_input(char*, char*, char**, int, void*, t_tipo_estrutura);
 void desenhar_formulario_input(t_formulario_input*);            // Desenhar um formulário de input
-void refresh_formulario_input(t_formulario_input*);             // Atualizar o formulário de input
-int  ler_formulario_input(t_formulario_input*);                 // Lê os campos do formulário de input e guarda os dados na estrutura
+int  ler_formulario_input(t_formulario_input*, t_estado_programa*);                 // Lê os campos do formulário de input e guarda os dados na estrutura
 
 
 /// AÇÕES RÁPIDAS ///
@@ -147,7 +144,8 @@ void desenhar_caixa(int, int, int, int);                        // Desenhar uma 
 void gotoxy(int, int);                                          // Posicionar o cursor na consola
 void imprimir_centrado(char*, t_tamanho_consola*);              // Imprimir um texto centrado na consola
 void pintar_consola(char*);                                     // Pintar a consola com uma cor
-t_resolucao* obter_resolucao_ecra();
+void remover_espacos_a_mais(char*);                             // Remover os espaços a mais no inicio, fim e meio de uma string
+char* string_maiusculas(char*);                                  // Converter uma string para maiúsculas
 
 
 #endif //PROJETO1_STDOUT_H
