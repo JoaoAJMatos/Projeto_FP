@@ -22,8 +22,6 @@
 #include <io.h>
 #undef _O_U16TEXT                               // Remover definicao da constante para evitar avisos de compilacao
 #define _O_U16TEXT 0x00020000                   // O compilador nao reconhecia esta constante entao tive de a definir
-#undef printf
-#define printf wprintf
 #else                                           // Posix
 #include <sys/ioctl.h>                          // Para obter o tamanho da janela
 #include <curses.h>
