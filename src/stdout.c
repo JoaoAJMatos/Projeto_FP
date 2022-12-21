@@ -469,9 +469,9 @@ static void escrever_titulo_do_menu(t_menu* menu) {
     printf("%s", menu->subtitulo);
 
     gotoxy(menu->posicao_x, menu->posicao_y);
-    wprintf(ENTRONCAMENTO_ESQUERDA);
+    //wprintf(ENTRONCAMENTO_ESQUERDA);
     gotoxy(menu->posicao_x + menu->largura - 1, menu->posicao_y);
-    wprintf(ENTRONCAMENTO_DIREITA);
+    //wprintf(ENTRONCAMENTO_DIREITA);
 }
 
 
@@ -501,11 +501,11 @@ static void escrever_caixa_de_input(t_menu* menu) {
     printf("%s", menu->mensagem);
 
     gotoxy(menu->posicao_x + strlen(menu->mensagem) + 4, menu->posicao_y + menu->altura + 1);
-    printf("%s", LINHA_VERTICAL);
+    wprintf(L"%lc", LINHA_VERTICAL);
     gotoxy(menu->posicao_x + strlen(menu->mensagem) + 4, menu->posicao_y + menu->altura + 2);
-    printf("%s", ENTRONCAMENTO_BAIXO);
+    wprintf(L"%lc", ENTRONCAMENTO_BAIXO);
     gotoxy(menu->posicao_x + strlen(menu->mensagem) + 4, menu->posicao_y + menu->altura);
-    printf("%s", ENTRONCAMENTO_CIMA);
+    wprintf(L"%lc", ENTRONCAMENTO_CIMA);
 
     gotoxy(menu->posicao_x + strlen(menu->mensagem) + 5, menu->posicao_y + menu->altura + 1);
 }
