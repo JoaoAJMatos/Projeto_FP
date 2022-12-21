@@ -10,6 +10,7 @@
 #include <string.h>
 #include <wchar.h>
 #include <locale.h>
+#include <fcntl.h>
 
 #include "comum.h"
 #include "app.h"
@@ -18,6 +19,11 @@
 
 #if defined(_WIN32) || defined(_WIN64)          // Windows
 #include <windows.h>                            // Para interagir com a API do Windows
+#include <io.h>
+#undef _O_U16TEXT                               // Remover definicao da constante para evitar avisos de compilacao
+#define _O_U16TEXT 0x00020000                   // O compilador nao reconhecia esta constante entao tive de a definir
+#undef printf
+#define printf wprintf
 #else                                           // Posix
 #include <sys/ioctl.h>                          // Para obter o tamanho da janela
 #include <curses.h>
@@ -42,17 +48,17 @@
 #define LARGURA_MINIMA_RECOMENDADA 90
 
 
-#define CANTO_SUPERIOR_ESQUERDO "╔"
-#define CANTO_SUPERIOR_DIREITO "╗"
-#define CANTO_INFERIOR_ESQUERDO "╚"
-#define CANTO_INFERIOR_DIREITO "╝"
-#define LINHA_HORIZONTAL "═"
-#define LINHA_VERTICAL "║"
-#define INTERSECCAO "╬"
-#define ENTRONCAMENTO_ESQUERDA "╠"
-#define ENTRONCAMENTO_DIREITA "╣"
-#define ENTRONCAMENTO_CIMA "╦"
-#define ENTRONCAMENTO_BAIXO "╩"
+#define CANTO_SUPERIOR_ESQUERDO 0x02554 // "╔"
+#define CANTO_SUPERIOR_DIREITO  0x02557 // "╗"
+#define CANTO_INFERIOR_ESQUERDO 0x0255A // "╚"
+#define CANTO_INFERIOR_DIREITO  0x0255D // "╝"
+#define LINHA_HORIZONTAL        0x02550 // "═"
+#define LINHA_VERTICAL          0x02551 // "║"
+#define INTERSECCAO             0x0255C // "╬"
+#define ENTRONCAMENTO_ESQUERDA  0x02560 // "╠"
+#define ENTRONCAMENTO_DIREITA   0x02563 // "╣"
+#define ENTRONCAMENTO_CIMA      0x02566 // "╦"
+#define ENTRONCAMENTO_BAIXO     0x02569 // "╩"
 
 
 /* =========== ESTRUTURAS =========== */
@@ -109,16 +115,6 @@ typedef struct {
 } t_formulario_input;
 
 
-/**
- * Esta função com o atributo constructor é executada sempre que o programa é iniciado, antes da função main.
- * Verifica o tamanho da consola e ajusta o tamanho do buffer de output para que o programa não tenha problemas.
- *
- * @return int
- */
-__attribute__((constructor)) int inicializar_stdout();
-
-
-
 /// MENU ///
 t_menu* criar_menu(char*, char*, char**, int, char*, char*, int, int, int, char*, char*, int);
 void desenhar_menu(t_menu*);                                    // Desenhar um menu
@@ -128,8 +124,8 @@ int  ler_opcao_menu(t_menu*);                                   // Ler uma opç�
 
 /// FORMULÁRIOS ///
 t_formulario_input* criar_formulario_input(char*, char*, char**, int, void*, t_tipo_estrutura);
-void desenhar_formulario_input(t_formulario_input*);            // Desenhar um formulário de input
-int  ler_formulario_input(t_formulario_input*, t_estado_programa*);                 // Lê os campos do formulário de input e guarda os dados na estrutura
+void desenhar_formulario_input(t_formulario_input*);                // Desenhar um formulário de input
+int  ler_formulario_input(t_formulario_input*, t_estado_programa*); // Lê os campos do formulário de input e guarda os dados na estrutura
 
 
 /// AÇÕES RÁPIDAS ///

@@ -1,5 +1,5 @@
 # Definições do CMake e do standard do C
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.13)
 set(CMAKE_C_STANDARD 23)
 
 # Definir nome e versão do projeto

@@ -44,10 +44,10 @@ typedef enum {
  * É usada pela função prompt() de modo a decidir como deve ser interpretado o void* passado como argumento.
  */
 typedef enum {
-    INT,
-    FLOAT,
-    STRING, // Não é um dado primitivo, mas está aqui na mesma
-    CHAR
+    T_INT,
+    T_FLOAT,
+    T_STRING, // Não é um dado primitivo, mas está aqui na mesma
+    T_CHAR
 } t_tipo_primitivo;
 
 // NOTA: estas definições de enumerações poderiam ter sido evitadas se estivessemos a usar C++, recorrendo a templates e

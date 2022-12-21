@@ -15,6 +15,7 @@
 #if defined(_WIN32) || defined(_WIN34)          // Windows
 #define SEPARADOR_DIRETORIO "\\"                // Separador de diretório para Windows
 
+#include <windows.h>
 #include <direct.h>                             // Para usar o mkdir
 #include <io.h>                                 // Para usar a função _access()
 #define F_OK 0                                  // Arquivo existe

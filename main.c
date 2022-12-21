@@ -56,7 +56,7 @@ void listar_inscricoes(t_estado_programa*);
 
 /* ========================================================== */
 
-void handler_interrupcao(int);
+int inicializar_stdout();
 
 
 /// POSSIVEIS OPCOES DO MENU PRINCIPAL ///
@@ -131,6 +131,9 @@ int main() {
     // Este estado é partilhado entre funções, de modo que possam aceder e consultar o estado atual
     // do programa.
     t_estado_programa* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+
+    inicializar_stdout();
+    limpar_ecra();
 
     /// CARREGAR O ESTADO DO PROGRAMA DO DISCO ///
     if (carregar_dados(caminho_save, estado_programa) < 0) {
@@ -213,7 +216,7 @@ char confirmar_saida(char* mensagem, char* subtitulo, char* dica) {
     char confirmacao = 0;
     do {
         limpar_ecra();
-        prompt(mensagem, subtitulo, dica, &confirmacao, CHAR, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        prompt(mensagem, subtitulo, dica, &confirmacao, T_CHAR, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
         confirmacao = toupper(confirmacao);
     } while (confirmacao != 'S' && confirmacao != 'N');
 
@@ -243,6 +246,7 @@ char confirmar_saida(char* mensagem, char* subtitulo, char* dica) {
 int carregar_dados(char* caminho_save, t_estado_programa* estado_programa) {
     char caminho[1024];
     caminho_save = obter_caminho_save();
+    limpar_ecra();
 
     if (ficheiro_existe(caminho_save)) {                           // Verificar se o ficheiro de save existe
         estado_programa = carregar_estado_programa(caminho_save);  // Se existir, carregar o estado do programa
@@ -252,7 +256,7 @@ int carregar_dados(char* caminho_save, t_estado_programa* estado_programa) {
     // Se for a primeira vez que o utilizador inicia o programa, o programa deve perguntar onde é que o utilizador
     // pretende guardar os dados do programa.
     prompt("Primeira entrada no programa detetada", "Introduza o caminho relativo/absoluto para o ficheiro de save",
-           "Caminho", caminho, STRING, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+           "Caminho", caminho, T_STRING, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
 
     if (guardar_caminho_save(caminho) < 0) return ERRO;
     inicializar_vetores(estado_programa->participantes, estado_programa->atividades, estado_programa->inscricoes);
@@ -334,7 +338,7 @@ void menu_participantes(t_estado_programa* estado_programa) {
 
 int inserir_atividade(t_estado_programa* estado_programa) {
     t_formulario_input* formulario_atividade;
-    char* campos_formulario_atividade[]    = {"Identificador", "Designação","Data","Hora","Local","Tipo", "Associacao de Estudantes", "Valor"};
+    char* campos_formulario_atividade[] = {"Identificador", "Designação","Data","Hora","Local","Tipo", "Associacao de Estudantes", "Valor"};
     t_atividade* atividade;
 
     if (*estado_programa->numero_atividadades_inseridas == NUMERO_MAXIMO_DE_ATIVIDAES) {
@@ -378,4 +382,29 @@ void menu_atividades(t_estado_programa* estado_programa) {
                 break;
         }
     } while (opcao != VOLTAR_MENU_ATIVIDADES);
+}
+
+
+/* =============================================================== */
+
+/**
+ * Verifica se a consola tem as dimensões mínimas necessárias para o bom funcionamento do programa
+ * e altera o modo da consola para UTF-16 caso esteja a ser executado no Windows. 
+ * 
+ * @return int
+ */
+int inicializar_stdout() {
+    t_tamanho_consola* tamanho_consola = obter_tamanho_consola();
+
+#if defined(_WIN32)
+    _setmode(_fileno(stdout), _O_U16TEXT);
+#endif
+
+    if (tamanho_consola->largura < LARGURA_MINIMA_RECOMENDADA || tamanho_consola->altura < ALTURA_MINIMA_RECOMENDADA) {
+        printf("Aconselha-se um terminal com pelo menos %dx%d caracteres.\n", LARGURA_MINIMA_RECOMENDADA, ALTURA_MINIMA_RECOMENDADA);
+        getchar();
+    }
+
+    free(tamanho_consola);
+    return OK;
 }

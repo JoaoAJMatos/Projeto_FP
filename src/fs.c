@@ -4,6 +4,7 @@
 
 #include "../include/fs.h"
 
+
 /* ========================================================== */
 /* =                     I/O FICHEIROS                      = */
 /* ========================================================== */
@@ -49,8 +50,15 @@ int ficheiro_existe(const char* caminho) {
  * @return int
  */
 int caminho_existe(const char* caminho) {
+#ifdef _WIN32
+    DWORD ftyp = GetFileAttributesA(caminho);
+    if (ftyp == INVALID_FILE_ATTRIBUTES) {
+        return 0;
+    }
+#else
     struct stat buffer;
     return (stat(caminho, &buffer) == 0);
+#endif
 }
 
 
@@ -68,9 +76,11 @@ int criar_arvore_diretorios(const char* caminho) {
 
     while ((p = strchr(p + 1, '/')) != NULL) {
         *p = '\0';
-        if (mkdir(caminho, S_IRWXU) == ERRO) {
-            return ERRO;
-        }
+        #ifdef _WIN32
+            if (mkdir(caminho) == ERRO) return ERRO;
+        #else
+            if (mkdir(caminho, S_IRWXU) == ERRO) return ERRO;
+        #endif
         *p = '/';
     }
 
@@ -108,15 +118,30 @@ char* extensao_ficheiro(const char* caminho) {
  * @return
  */
 t_tamanho_ficheiro tamanho_ficheiro(const char* caminho) {
+#ifdef _WIN32
+    HANDLE hFile = CreateFile(caminho, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    LARGE_INTEGER size;
+    GetFileSizeEx(hFile, &size);
+    CloseHandle(hFile);
+    return size.QuadPart;
+#else
     struct stat st;
     stat(caminho, &st);
     return st.st_size;
+#endif
 }
 
 char* caminho_relativo_para_absoluto(const char* caminho) {
+    
+#ifdef _WIN32
+    char* caminho_absoluto = malloc(TAMANHO_MAXIMO_CAMINHO);
+    _fullpath(caminho_absoluto, caminho, TAMANHO_MAXIMO_CAMINHO);
+    return caminho_absoluto;
+#else
     char* caminho_absoluto = malloc(TAMANHO_MAXIMO_CAMINHO);
     realpath(caminho, caminho_absoluto);
     return caminho_absoluto;
+#endif
 }
 
 char* caminho_sem_nome_ficheiro(const char* caminho) {

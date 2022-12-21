@@ -60,23 +60,6 @@ static int  contem_opcao(char*, char**, int);                      // Verifica s
 /* =                       FUNÇÕES                          = */
 /* ========================================================== */
 
-
-/**
- * Verifica se a consola tem as dimensões mínimas necessárias para o bom funcionamento do programa.
- * @return int
- */
-__attribute__ ((constructor)) int inicializar_stdout() {
-    t_tamanho_consola* tamanho_consola = obter_tamanho_consola();
-
-    if (tamanho_consola->largura < LARGURA_MINIMA_RECOMENDADA || tamanho_consola->altura < ALTURA_MINIMA_RECOMENDADA) {
-        printf("Aconselha-se um terminal com pelo menos %dx%d caracteres.\n", LARGURA_MINIMA_RECOMENDADA, ALTURA_MINIMA_RECOMENDADA);
-        getchar();
-    }
-
-    free(tamanho_consola);
-    return OK;
-}
-
 /**
  * @brief Devolve o tamanho da consola
  * @return t_tamanho_consola*
@@ -191,7 +174,6 @@ t_menu* criar_menu(char* titulo, char* subtitulo, char** opcoes, int num_opcoes,
  * @param menu
  */
 void desenhar_menu(t_menu* menu) {
-    setlocale(LC_CTYPE, "");        // Para imprimir caracteres especiais
 
     limpar_ecra();
     definir_cor_texto(menu->cor_letras);
@@ -218,25 +200,25 @@ void desenhar_menu(t_menu* menu) {
 void desenhar_caixa(int posicao_x, int posicao_y, int largura, int altura)
 {
     gotoxy(posicao_x, posicao_y);
-    printf(CANTO_SUPERIOR_ESQUERDO);
+    wprintf(L"%lc", CANTO_SUPERIOR_ESQUERDO);
     for (int i = 0; i < largura - 2; i++) {
-        printf(LINHA_HORIZONTAL);
+        wprintf(L"%lc", LINHA_HORIZONTAL);
     }
-    printf(CANTO_SUPERIOR_DIREITO);
+    wprintf(L"%lc", CANTO_SUPERIOR_DIREITO);
 
     for (int i = 0; i < altura - 2; i++) {
         gotoxy(posicao_x, posicao_y + i + 1);
-        printf(LINHA_VERTICAL);
+        wprintf(L"%lc", LINHA_VERTICAL);
         gotoxy(posicao_x + largura - 1, posicao_y + i + 1);
-        printf(LINHA_VERTICAL);
+        wprintf(L"%lc", LINHA_VERTICAL);
     }
 
     gotoxy(posicao_x, posicao_y + altura - 1);
-    printf(CANTO_INFERIOR_ESQUERDO);
+    wprintf(L"%lc", CANTO_INFERIOR_ESQUERDO);
     for (int i = 0; i < largura - 2; i++) {
-        printf(LINHA_HORIZONTAL);
+        wprintf(L"%lc", LINHA_HORIZONTAL);
     }
-    printf(CANTO_INFERIOR_DIREITO);
+    wprintf(L"%lc", CANTO_INFERIOR_DIREITO);
 }
 
 
@@ -487,9 +469,9 @@ static void escrever_titulo_do_menu(t_menu* menu) {
     printf("%s", menu->subtitulo);
 
     gotoxy(menu->posicao_x, menu->posicao_y);
-    printf(ENTRONCAMENTO_ESQUERDA);
+    wprintf(ENTRONCAMENTO_ESQUERDA);
     gotoxy(menu->posicao_x + menu->largura - 1, menu->posicao_y);
-    printf(ENTRONCAMENTO_DIREITA);
+    wprintf(ENTRONCAMENTO_DIREITA);
 }
 
 
@@ -586,16 +568,16 @@ static void escrever_conteudo_do_prompt(int posicao_x, int posicao_y, char* mens
 
 static void ler_input_do_prompt(void* variavel_output, t_tipo_primitivo tipo_variavel_output) {
     switch (tipo_variavel_output) {
-        case INT:
+        case T_INT:
             scanf("%d", (int*) variavel_output);
             break;
-        case FLOAT:
+        case T_FLOAT:
             scanf("%f", (float*) variavel_output);
             break;
-        case CHAR:
+        case T_CHAR:
             scanf(" %c", (char*) variavel_output);
             break;
-        case STRING:
+        case T_STRING:
             scanf("%s", (char*) variavel_output);
             break;
     } // Sem caso default para que o compilador nos avise de casos não tratados
