@@ -8,6 +8,8 @@
  * 
  */
 
+
+
 // TODO: Fazer testes do processo de salvar/carregar a aplicação, incluindo as funções do fs que são usadas
 
 #include <stdio.h>
@@ -15,8 +17,9 @@
 #include "include/stdout.h"
 #include "include/app.h"
 
-#define COR_TEXTO_PROGRAMA COR_TEXTO_PRETO
+#define COR_TEXTO_PROGRAMA COR_TEXTO_BRANCO
 #define COR_FUNDO_PROGRAMA COR_FUNDO_AZUL_CLARO
+
 
 /* ========================================================== */
 /* =                      PROTÓTIPOS                        = */
@@ -105,6 +108,12 @@ typedef enum {
 /* ========================================================== */
 
 int main() {
+
+    printf("Ola");
+    //print("Ola");
+    fflush(stdin);
+    getchar();
+
     /// DECLARAÇÃO DE VARIÁVEIS  ///
     char caminho_save[1024];            // Caminho para o ficheiro onde o estado do programa será guardado
 

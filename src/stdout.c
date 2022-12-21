@@ -463,7 +463,7 @@ static void escrever_titulo_do_menu(t_menu* menu) {
     desenhar_caixa(menu->posicao_x, menu->posicao_y - 2, menu->largura, 3);
 
     gotoxy(menu->posicao_x + (menu->largura - strlen(menu->titulo)) / 2, menu->posicao_y - 3);
-    printf("%s", menu->titulo);
+    printf(menu->titulo);
 
     gotoxy(menu->posicao_x + (menu->largura - strlen(menu->subtitulo)) / 2, menu->posicao_y - 1);
     printf("%s", menu->subtitulo);

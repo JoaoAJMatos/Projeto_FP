@@ -20,8 +20,15 @@
 #if defined(_WIN32) || defined(_WIN64)          // Windows
 #include <windows.h>                            // Para interagir com a API do Windows
 #include <io.h>
+
+
+#define printf(...) \
+    wprintf(L"%s"L"%s", __VA_ARGS__)
+
+
 #undef _O_U16TEXT                               // Remover definicao da constante para evitar avisos de compilacao
 #define _O_U16TEXT 0x00020000                   // O compilador nao reconhecia esta constante entao tive de a definir
+
 #else                                           // Posix
 #include <sys/ioctl.h>                          // Para obter o tamanho da janela
 #include <curses.h>
@@ -31,7 +38,7 @@
                       "\033[H\033[J"            // ANSI escape code para limpar a consola
 
 #define limpar_ecra() \
-    printf(ESCAPE_CODE_LIMPAR_CONSOLA)          // Definir uma macro para limpar o ecrã
+    wprintf(L"%s", ESCAPE_CODE_LIMPAR_CONSOLA)         // Definir uma macro para limpar o ecrã
 
 #define limpar_formatacao() \
     printf(TEXTO_RESET)                         // Definir uma macro para limpar a formatação
