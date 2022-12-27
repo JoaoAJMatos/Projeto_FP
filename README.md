@@ -26,6 +26,8 @@ make
 
 ### Compilação com recurso às ferramentas do projeto
 
+> __Nota__: As ferramentas do projeto foram desenvolvidas com base num projeto secundário desenvolvido com o intuito de facilitar a compilação, construção e execução do projeto de fundamentos de programação. O código fonte, bem como a documentação, podem ser encontrados no repositório remoto [aqui](https://github.com/JoaoAJMatos/PyCtx).
+
 ```bash
 cd Projeto_FP
 cd scripts
