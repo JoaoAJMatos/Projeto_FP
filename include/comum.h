@@ -12,6 +12,8 @@
 #define __inline__ inline
 #endif // defined(__aarch64__)
 
+#undef OK
+
 /**
  * Enumeração para para os diferentes estados de uma função.
  */
@@ -19,6 +21,8 @@ enum {
     ERRO = -1,
     OK = 0
 };
+
+#define DEBUG 1
 
 // ======================================================================================================== //
 

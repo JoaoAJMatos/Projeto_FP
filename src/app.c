@@ -139,6 +139,7 @@ void mostrar_atividade(t_atividade* atividade) {
  */
 t_inscricao* criar_inscricao(int identificador, int id_participante, int id_atividade, t_atividade** atividades) {
     int indice_procura;
+    int numero_atividades = tamanho_vetor((void**) atividades);
 
     t_inscricao* inscricao = (t_inscricao*) malloc(sizeof(t_inscricao));
     inscricao->identificador = identificador;
@@ -146,7 +147,7 @@ t_inscricao* criar_inscricao(int identificador, int id_participante, int id_ativ
     inscricao->id_atividade = id_atividade;
 
     // Procurar o valor associado à atividade com o ID passado
-    indice_procura = procurar_atividade_por_id(atividades, tamanho_vetor((void **) atividades), id_atividade);
+    indice_procura = procurar_atividade_por_id(atividades, numero_atividades, id_atividade);
     if (indice_procura == -1) {
         return NULL;
     }
@@ -154,7 +155,6 @@ t_inscricao* criar_inscricao(int identificador, int id_participante, int id_ativ
     inscricao->valor_pago = atividades[indice_procura]->valor;
     inscricao->data = obter_data_atual();
     inscricao->hora = obter_hora_atual_completa();
-
     return inscricao;
 }
 
@@ -174,6 +174,9 @@ void mostrar_inscricao(t_inscricao* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
     printf("    ID da Atividade: %d\n", inscricao->id_atividade);
+    printf("    Valor Pago: %.2f\n", inscricao->valor_pago);
+    printf("    Data: %s\n", inscricao->data);
+    printf("    Hora: %s\n", inscricao->hora);
 }
 
 /* ========================================================== */
@@ -198,6 +201,21 @@ t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t
 }
 
 void libertar_estado_programa(t_estado_programa* estado_programa) {
+    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++)
+        libertar_participante(estado_programa->participantes[i]);
+
+    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++)
+        libertar_atividade(estado_programa->atividades[i]);
+
+    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++)
+        libertar_inscricao(estado_programa->inscricoes[i]);
+
+    free(estado_programa->participantes);
+    free(estado_programa->atividades);
+    free(estado_programa->inscricoes);
+    free(estado_programa->numero_participantes_inseridos);
+    free(estado_programa->numero_atividadades_inseridas);
+    free(estado_programa->numero_de_inscricoes);
     free(estado_programa);
 }
 
