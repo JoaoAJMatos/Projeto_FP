@@ -39,7 +39,7 @@ char* obter_data_atual() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     char* data_atual = (char*) malloc(sizeof(char) * 11);
-    sprintf(data_atual, "%d-%d-%d", data->tm_mday, data->tm_mon + 1, data->tm_year + 1900);
+    sprintf(data_atual, "%02d/%02d/%04d", data->tm_mday, data->tm_mon + 1, data->tm_year + 1900); // Formato DD/MM/AAAA
     return data_atual;
 }
 
