@@ -26,7 +26,7 @@ Para contribuires para o projeto, segue os seguintes passos:
 - `docs`: Adiciona ou corrige documentação (qualquer ficheiro _Markdown_).
 - `refactor`: Para mudanças na estrutura do código que não alteram o seu funcionamento.
 - `fs`: Para alterações referentes à interface do sistema de ficheiros (`fs.h` e `fs.c`).
-- `stdout`: Para alterações referentes à interface da _stdout_ (`stdout.h` e `stdout.c`).
+- `cli`: Para alterações referentes à interface da _stdout_/_stdin_ (`cli.h` e `cli.c`).
 - `cmake`: Para alterações referentes ao ficheiro `CMakeLists.txt`.
 - `git`: Para alterações referentes ao ficheiro `.gitignore`.
 
