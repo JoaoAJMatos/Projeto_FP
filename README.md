@@ -41,7 +41,7 @@ cd scripts
 
 ### Contribuir (instruções para o grupo)
 
-Para contribuir para o projeto, por favor segue as indicações descritas [aqui](CONTRIBUIR.md)
+Para contribuir para o projeto, por favor segue as indicações descritas [aqui](docs/CONTRIBUIR.md)
 
 ### Notas de desenvolvimento
 
