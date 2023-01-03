@@ -12,11 +12,11 @@
 
 #include <stdio.h>
 
-#include "include/stdout.h"
+#include "include/cli.h"
 #include "include/app.h"
 
-#define COR_TEXTO_PROGRAMA COR_TEXTO_PRETO
-#define COR_FUNDO_PROGRAMA COR_FUNDO_AZUL_CLARO
+#define COR_TEXTO_PROGRAMA COR_TEXTO_VERDE
+#define COR_FUNDO_PROGRAMA COR_FUNDO_PRETO
 
 /* ========================================================== */
 /* =                      PROTÓTIPOS                        = */
@@ -56,7 +56,11 @@ void listar_inscricoes(t_estado_programa*);
 
 /* ========================================================== */
 
-void handler_interrupcao(int);
+void inserir_dados_teste(t_estado_programa*);   // Insere alguns dados automáticamente para testes
+void salvar_programa(t_estado_programa*);
+
+/* ========================================================== */
+
 
 
 /// POSSIVEIS OPCOES DO MENU PRINCIPAL ///
@@ -66,7 +70,8 @@ typedef enum {
     GESTAO_INSCRICOES,
     ESTATISTICAS,
     CONSULTAS,
-    SAIR,
+    SALVAR,
+    SAIR
 } t_opcao_menu_principal;
 
 typedef enum {
@@ -122,8 +127,8 @@ int main() {
 
     /// MENU PRINCIPAL ///
     // Definir opções para os menus
-    char* opcoes_menu[] = {"1. Gestão de Participantes","2. Gestão de Atividades","3. Gestão de Inscrições","4. Estatísticas", "5. Consultas", "6. Sair"};
-    menu_principal = criar_menu("PROJETO FP", "Menu Principal", opcoes_menu, 6, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+    char* opcoes_menu[] = {"1. Gestão de Participantes","2. Gestão de Atividades","3. Gestão de Inscrições","4. Estatísticas", "5. Consultas", "6. Salvar", "7. Sair"};
+    menu_principal = criar_menu("PROJETO FP", "Menu Principal", opcoes_menu, 7, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
 
     /// ESTADO DO PROGRAMA  ///
     // Criação do estado do programa
@@ -132,11 +137,16 @@ int main() {
     // do programa.
     t_estado_programa* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
 
+#if DEBUG
+    // Insere alguns dados para testes
+    //inserir_dados_teste(estado_programa);
+#else
     /// CARREGAR O ESTADO DO PROGRAMA DO DISCO ///
     if (carregar_dados(caminho_save, estado_programa) < 0) {
         printf("Erro ao carregar os dados do disco.\n");
         return ERRO;
     }
+#endif
 
     /// LOOP PRINCIPAL DO PROGRAMA  ///
     do {
@@ -155,14 +165,19 @@ int main() {
                 menu_atividades(estado_programa);
                 break;
             case GESTAO_INSCRICOES:
-                limpar_ecra();
-                alerta("Gestão de Inscrições", "Ainda não implementado", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+                menu_inscricoes(estado_programa);
                 break;
             case ESTATISTICAS:
                 limpar_ecra();
                 alerta("Gestão de Pagamentos", "Ainda não implementado", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
                 break;
             case CONSULTAS:
+                limpar_ecra();
+                alerta("Gestão de Pagamentos", "Ainda não implementado", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+                break;
+            case SALVAR:
+                limpar_ecra();
+                alerta("Gestão de Pagamentos", "Ainda não implementado", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
                 break;
             case SAIR:
                 confirmacao_saida = confirmar_saida("Tem a certeza que pretende sair?", "", "S/N");
@@ -194,7 +209,7 @@ int main() {
  */
 void inicializar_vetores(t_participante** participantes, t_atividade** atividades, t_inscricao** inscricoes) {
     for (int i = 0; i < NUMERO_MAXIMO_DE_PARTICIPANTES; i++) participantes[i] = NULL;
-    for (int i = 0; i < NUMERO_MAXIMO_DE_ATIVIDAES; i++) atividades[i] = NULL;
+    for (int i = 0; i < NUMERO_MAXIMO_DE_ATIVIDAES; i++) atividades[i]  = NULL;
     for (int i = 0; i < NUMERO_MAXIMO_DE_INSCRICOES; i++) inscricoes[i] = NULL;
 }
 
@@ -295,6 +310,57 @@ int inserir_participante(t_estado_programa* estado_programa) {
     return OK;
 }
 
+void editar_participante(t_estado_programa* estado_programa) {
+    t_formulario_input* formulario_participante;
+    t_participante* participante;
+    char* campos_formulario_participante[] = {"Identificador", "Nome", "Escola", "NIF", "Email", "Telefone"};
+    int id_participante, indice_participante;
+
+    if (*estado_programa->numero_participantes_inseridos == 0) {
+        alerta("Erro ao tentar editar participante", "Não existem participantes registados", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        return;
+    }
+
+    // Perguntar qual o ID do participante que pretende alterar
+    prompt("Editar Participante", "Insira o ID do participante que pretende alterar", "ID", &id_participante, INT, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+
+    // Verificar se o ID inserido existe
+    indice_participante = procurar_participante_por_id(estado_programa->participantes, *estado_programa->numero_participantes_inseridos, id_participante);
+    if (indice_participante == -1) {
+        alerta("Erro", "Não existe nenhum participante com o ID inserido", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        return;
+    }
+
+    participante = estado_programa->participantes[indice_participante];
+    formulario_participante = criar_formulario_input("Gestão de Participantes", "Insira os dados do novo participante", campos_formulario_participante, 6, &participante, PARTICIPANTE);
+    desenhar_formulario_input(formulario_participante);
+    ler_formulario_input(formulario_participante, estado_programa);
+    estado_programa->participantes[indice_participante] = participante;
+}
+
+void listar_participantes(t_estado_programa* estado_programa) {
+    int i;
+    t_participante* participante;
+    limpar_ecra();
+
+    if (*estado_programa->numero_participantes_inseridos == 0) {
+        alerta("Erro ao tentar listar participantes", "Não existem participantes registados", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        return;
+    }
+
+    /*for (i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
+        participante = estado_programa->participantes[i];
+        printf("======================================\n");
+        printf("Participante %d:\n\n", i + 1);
+        mostrar_participante(participante);
+        printf("======================================\n");
+    }*/
+
+    mostrar_estado_programa(estado_programa);
+    fflush(stdin);
+    getchar();
+}
+
 
 /**
  * @brief Menu participantes
@@ -315,15 +381,18 @@ void menu_participantes(t_estado_programa* estado_programa) {
         switch (opcao) {
             case INSERIR_PARTICIPANTE:
                 inserir_participante(estado_programa);
+                mostrar_estado_programa(estado_programa);
+                fflush(stdin);
+                getchar();
                 break;
             case EDITAR_PARTICIPANTE:
-                //editar_participante(estado_programa);
+                editar_participante(estado_programa);
                 break;
             case REMOVER_PARTICIPANTE:
                 //eliminar_participante(estado_programa);
                 break;
             case LISTAR_PARTICIPANTES:
-                //listar_participantes(estado_programa);
+                listar_participantes(estado_programa);
                 break;
             case VOLTAR_MENU_PARTICIPANTES:
                 break;
@@ -378,4 +447,64 @@ void menu_atividades(t_estado_programa* estado_programa) {
                 break;
         }
     } while (opcao != VOLTAR_MENU_ATIVIDADES);
+}
+
+void inserir_inscricao(t_estado_programa* estado_programa) {
+    t_formulario_input* formulario_inscricao;
+    char* campos_formulario_inscricao[]    = {"Identificador", "ID Participante", "ID Atividade"};
+    t_inscricao* inscricao;
+
+    if (*estado_programa->numero_de_inscricoes == NUMERO_MAXIMO_DE_INSCRICOES) {
+        alerta("Erro", "Não é possível adicionar mais inscrições", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        return;
+    }
+
+    formulario_inscricao = criar_formulario_input("Gestão de Inscricoes", "Insira os dados da nova inscricao", campos_formulario_inscricao, 3, &inscricao, INSCRICAO);
+    desenhar_formulario_input(formulario_inscricao);
+    ler_formulario_input(formulario_inscricao, estado_programa);
+
+    estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
+    (*estado_programa->numero_de_inscricoes)++;
+}
+
+void menu_inscricoes(t_estado_programa* estado_programa) {
+    t_menu* menu_inscricoes;
+    char* opcoes_menu_inscricoes[] = {"1. Criar Inscricao","2. Editar Inscricao","3. Eliminar Inscricao","4. Mostrar Inscricoes","5. Voltar"};
+    menu_inscricoes = criar_menu("PROJETO FP", "Gestão de Inscricoes", opcoes_menu_inscricoes, 5, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+    t_opcao_menu_inscricoes opcao;
+
+    do {
+        desenhar_menu(menu_inscricoes);
+        opcao = (t_opcao_menu_inscricoes) ler_opcao_menu(menu_inscricoes);
+        switch (opcao) {
+            case INSERIR_INSCRICAO:
+                inserir_inscricao(estado_programa);
+                break;
+            case EDITAR_INSCRICAO:
+                //editar_inscricao(estado_programa);
+                break;
+            case REMOVER_INSCRICAO:
+                //eliminar_inscricao(estado_programa);
+                break;
+            case LISTAR_INSCRICOES:
+                //listar_inscricoes(estado_programa);
+                break;
+            case VOLTAR_MENU_INSCRICOES:
+                break;
+        }
+    } while (opcao != VOLTAR_MENU_INSCRICOES);
+}
+
+/* ========================================================== */
+
+void inserir_dados_teste(t_estado_programa* estado_programa) {
+    t_participante *participante1 = criar_participante(1, "Joao", "ESTG", 123, "mail@mail.com", 123456789);
+    t_atividade *atividade1 = criar_atividade(2, "Descida do rio", "30/04/2023", "10:40", "Tejo", "Lazer", "AE-ESTG", 15);
+    estado_programa->participantes[0] = participante1;
+    estado_programa->atividades[0] = atividade1;
+    t_inscricao *inscricao1 = criar_inscricao(1, 1, 2, estado_programa->atividades);
+    estado_programa->inscricoes[0] = inscricao1;
+    (*estado_programa->numero_participantes_inseridos)++;
+    (*estado_programa->numero_atividadades_inseridas)++;
+    (*estado_programa->numero_de_inscricoes)++;
 }
