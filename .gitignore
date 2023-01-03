@@ -2,3 +2,4 @@ cmake-build-debug
 .idea
 scripts/build
 build
+*__pycache__*
