@@ -2,7 +2,7 @@
 // Created by João Matos on 14/12/2022.
 //
 
-#include "../include/stdout.h"
+#include "../include/cli.h"
 
 #include <ctype.h>
 
