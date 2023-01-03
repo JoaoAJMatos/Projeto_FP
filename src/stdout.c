@@ -29,7 +29,7 @@ static t_atividade*  ler_atividade();                           // Lê uma ativi
 static t_inscricao*  ler_inscricao(t_estado_programa*);         // Lê uma inscrição do formulário de input
 
 static void ler_identificador_participante_inscricao(int*, int, t_estado_programa*);        // Lê o identificador de um participante do formulário de input
-static void ler_identificador_atividade_inscricao(int*, int, t_estado_programa*);           // Lê o nome de um participante do formulário de input
+static void ler_identificador_atividade_inscricao(const int*, int, t_estado_programa*);           // Lê o nome de um participante do formulário de input
 
 static void ler_identificador(int*, int);                          // Lê um identificador do formulário de input
 static void ler_string(char*, int, int);                           // Lê um nome do formulário de input
@@ -402,6 +402,7 @@ void prompt(char* mensagem, char* subtitulo, char* dica, void* variavel_output, 
     int posicao_x = (tamanho_consola->largura - comprimento_do_maior_elemento) / 2;
     int posicao_y = (tamanho_consola->altura - 6) / 2;
 
+    limpar_ecra();
     definir_cor_texto(cor_texto);
     definir_cor_fundo(cor_fundo);
 
@@ -429,18 +430,15 @@ void alerta(char* titulo, char* alerta, char* cor_texto, char* cor_fundo) {
     int posicao_x = (tamanho_consola->largura - comprimento_do_maior_elemento) / 2;
     int posicao_y = (tamanho_consola->altura - 6) / 2;
 
+    limpar_ecra();
     definir_cor_texto(cor_texto);
     definir_cor_fundo(cor_fundo);
 
-    // Escrever caixa do formulário
     desenhar_caixa(posicao_x, posicao_y, comprimento_do_maior_elemento + 4, 8);
-
-    // Escrever o conteudo da caixa do prompt
     gotoxy(posicao_x + 2, posicao_y + 1);
     printf("%s", titulo);
 
     esperar_input_do_utilizador(alerta, posicao_x + 2, posicao_y + 6);
-
     limpar_formatacao();
 }
 
@@ -681,7 +679,12 @@ static void ler_escola(char* escola, int pos_y) {
 }
 
 static void ler_nif(int* nif, int pos_y) {
-    do {
+    // Ignorar a verificação do NIF em modo debug
+    #if DEBUG
+        gotoxy(6, pos_y);
+        scanf("%d", nif);
+    #else
+        do {
         gotoxy(6, pos_y);
         scanf("%d", nif);
         if (!(nif_valido(*nif))) {
@@ -692,6 +695,7 @@ static void ler_nif(int* nif, int pos_y) {
             escrever_linha(6, pos_y, 50, ' ');
         }
     } while (!(nif_valido(*nif)));
+    #endif
 }
 
 static void ler_email(char* email, int pos_y) {
@@ -870,7 +874,7 @@ static void ler_identificador_participante_inscricao(int* id, int pos_y, t_estad
     id = &identificador_participante;
 }
 
-static void ler_identificador_atividade_inscricao(int* id, int pos_y, t_estado_programa* estado_programa) {
+static void ler_identificador_atividade_inscricao(const int* id, int pos_y, t_estado_programa* estado_programa) {
     int identificador_atividade;
     int posicao_atividade;
 
@@ -887,7 +891,7 @@ static void ler_identificador_atividade_inscricao(int* id, int pos_y, t_estado_p
         }
     } while (posicao_atividade == -1);
 
-    id= &identificador_atividade;
+    id = &identificador_atividade;
 }
 
 /// VALIDAÇÔES ESPECIAIS  ///
