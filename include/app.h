@@ -110,8 +110,7 @@ t_estado_programa* carregar_estado_programa(char*);
 int   guardar_estado_programa(char*, t_estado_programa*);
 void  mostrar_estado_programa(t_estado_programa*);
 
-char* obter_caminho_save();
-int   guardar_caminho_save(char*);
+
 
 
 /// PROCURA ///

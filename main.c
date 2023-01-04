@@ -235,43 +235,14 @@ char confirmar_saida(char* mensagem, char* subtitulo, char* dica) {
 }
 
 
-/**
- * @brief Carrega os dados do programa guardados no disco
- *
- * Esta função é chamada no início da execução do programa para carregar os dados guardados no disco.
- * Numa primeira instância, a função procura por um ficheiro denominado "proj.cfg" guardado numa localização
- * pré-definida (descrita no ficheiro app.h). Nesse ficheiro, encontra-se guardado o caminho para o ficheiro
- * onde os dados do programa estão guardados.
- *
- * Se o ficheiro (proj.cfg) for encontrado, a função recolhe o caminho guardado no ficheiro e tenta recolher os dados
- * do programa guardados no ficheiro de save (save.dat).
- *
- * Caso o ficheiro "proj.cfg" não exista na localização pré-definida, o utilizador é convidado a inserir o
- * caminho onde pretente que os dados sejam guardados. Após isso, os vetores de dados são inicializados a zero.
- *
- *
- * @param caminho_save
- * @param estado_programa
- * @return
- */
 int carregar_dados(char* caminho_save, t_estado_programa* estado_programa) {
-    char caminho[1024];
-    caminho_save = obter_caminho_save();
+    int valor_retorno = OK;
 
-    if (ficheiro_existe(caminho_save)) {                           // Verificar se o ficheiro de save existe
-        estado_programa = carregar_estado_programa(caminho_save);  // Se existir, carregar o estado do programa
-        return OK;
-    }
-
-    // Se for a primeira vez que o utilizador inicia o programa, o programa deve perguntar onde é que o utilizador
-    // pretende guardar os dados do programa.
-    prompt("Primeira entrada no programa detetada", "Introduza o caminho relativo/absoluto para o ficheiro de save",
-           "Caminho", caminho, STRING, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
-
-    if (guardar_caminho_save(caminho) < 0) return ERRO;
     inicializar_vetores(estado_programa->participantes, estado_programa->atividades, estado_programa->inscricoes);
+    estado_programa = carregar_estado_programa(caminho_save);  // Se existir, carregar o estado do programa
+    if(estado_programa = NULL) valor_retorno = ERRO;
 
-    return OK;
+    return valor_retorno;
 }
 
 

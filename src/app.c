@@ -268,67 +268,6 @@ t_estado_programa* carregar_estado_programa(char* nome_ficheiro) {
 /* ========================================================== */
 
 
-/**
- * @brief Devolve o caminho guardado no ficheiro de confirgurações do programa
- * @return
- */
-char* obter_caminho_save() {
-    char caminho[1024];
-    char caminho_save[1024];
-    sprintf(caminho, CAMINHO_CONFIG, nome_utilizador_computador());
-
-    if (!ficheiro_existe(caminho)) return NULL;
-
-    FILE* ficheiro = abrir_ficheiro(caminho, LEITURA);
-    if (ficheiro == NULL) return NULL;
-
-    fgets(caminho_save, 1024, ficheiro);
-    fechar_ficheiro(ficheiro);
-
-    return strdup(caminho_save);
-}
-
-/**
- * @brief Guarda o caminho do ficheiro de save no ficheiro de configurações do programa
- * @param caminho
- * @return OK se executar sem erro, ERRO caso contrário
- *
- * 28 linhas
- */
-int guardar_caminho_save(char* caminho) {
-    char caminho_config[1024];
-    char* caminho_sem_ficheiro;
-    int valor_retorno = OK;
-
-    if (caminho == NULL) valor_retorno = ERRO;
-
-    sprintf(caminho_config, CAMINHO_CONFIG, nome_utilizador_computador());
-    caminho_sem_ficheiro = caminho_sem_nome_ficheiro(caminho_config);
-    if (criar_arvore_diretorios(caminho_sem_ficheiro) < 0) {
-        printf("Erro ao criar a árvore de diretórios\n");
-        free(caminho_sem_ficheiro);
-        valor_retorno = ERRO;
-    }
-    else {
-        free(caminho_sem_ficheiro);
-        if (strcmp(caminho, ".") == 0) strcpy(caminho, diretorio_atual());
-        else strcpy(caminho, caminho_relativo_para_absoluto(caminho));
-
-        FILE* ficheiro = abrir_ficheiro(caminho_config, ESCRITA);
-        if (ficheiro == NULL) {
-            printf("Erro ao abrir o ficheiro de configurações\n");
-            valor_retorno = ERRO;
-        }
-        else {
-            fprintf(ficheiro, "%s", caminho);
-            fechar_ficheiro(ficheiro);
-        }
-    }
-    return valor_retorno;
-}
-
-
-
 /* ========================================================== */
 /* =                UTILITÁRIOS DE PESQUISA                 = */
 /* ========================================================== */
