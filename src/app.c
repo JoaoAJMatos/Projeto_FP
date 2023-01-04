@@ -56,9 +56,6 @@ t_participante* criar_participante(int identificador, char* nome, char* escola, 
  * @param participante
  */
 void libertar_participante(t_participante* participante) {
-    free(participante->nome);
-    free(participante->escola);
-    free(participante->email);
     free(participante);
 }
 
