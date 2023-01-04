@@ -106,7 +106,7 @@ t_atividade* criar_atividade(int identificador, char* designacao, char* data, ch
  * @param atividade
  */
 void libertar_atividade(t_atividade* atividade) {
-    libertar_memoria(atividade->designacao, atividade->data, atividade->hora, atividade->local, atividade->tipo, atividade->associacao_estudantes, NULL);
+    free(atividade);
 }
 
 /**
@@ -198,21 +198,9 @@ t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t
 }
 
 void libertar_estado_programa(t_estado_programa* estado_programa) {
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++)
-        libertar_participante(estado_programa->participantes[i]);
-
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++)
-        libertar_atividade(estado_programa->atividades[i]);
-
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++)
-        libertar_inscricao(estado_programa->inscricoes[i]);
-
-    free(estado_programa->participantes);
-    free(estado_programa->atividades);
-    free(estado_programa->inscricoes);
-    free(estado_programa->numero_participantes_inseridos);
-    free(estado_programa->numero_atividadades_inseridas);
-    free(estado_programa->numero_de_inscricoes);
+    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) libertar_participante(estado_programa->participantes[i]);
+    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) libertar_atividade(estado_programa->atividades[i]);
+    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
     free(estado_programa);
 }
 
@@ -303,33 +291,40 @@ char* obter_caminho_save() {
 /**
  * @brief Guarda o caminho do ficheiro de save no ficheiro de configurações do programa
  * @param caminho
- * @return
+ * @return OK se executar sem erro, ERRO caso contrário
+ *
+ * 28 linhas
  */
 int guardar_caminho_save(char* caminho) {
     char caminho_config[1024];
     char* caminho_sem_ficheiro;
-    if (caminho == NULL) return ERRO;
+    int valor_retorno = OK;
+
+    if (caminho == NULL) valor_retorno = ERRO;
 
     sprintf(caminho_config, CAMINHO_CONFIG, nome_utilizador_computador());
     caminho_sem_ficheiro = caminho_sem_nome_ficheiro(caminho_config);
     if (criar_arvore_diretorios(caminho_sem_ficheiro) < 0) {
         printf("Erro ao criar a árvore de diretórios\n");
         free(caminho_sem_ficheiro);
-        return ERRO;
+        valor_retorno = ERRO;
     }
-    free(caminho_sem_ficheiro);
-    if (strcmp(caminho, ".") == 0) strcpy(caminho, diretorio_atual());
-    else strcpy(caminho, caminho_relativo_para_absoluto(caminho));
+    else {
+        free(caminho_sem_ficheiro);
+        if (strcmp(caminho, ".") == 0) strcpy(caminho, diretorio_atual());
+        else strcpy(caminho, caminho_relativo_para_absoluto(caminho));
 
-    FILE* ficheiro = abrir_ficheiro(caminho_config, ESCRITA);
-    if (ficheiro == NULL) {
-        printf("Erro ao abrir o ficheiro de configurações\n");
-        return ERRO;
+        FILE* ficheiro = abrir_ficheiro(caminho_config, ESCRITA);
+        if (ficheiro == NULL) {
+            printf("Erro ao abrir o ficheiro de configurações\n");
+            valor_retorno = ERRO;
+        }
+        else {
+            fprintf(ficheiro, "%s", caminho);
+            fechar_ficheiro(ficheiro);
+        }
     }
-
-    fprintf(ficheiro, "%s", caminho);
-    fechar_ficheiro(ficheiro);
-    return OK;
+    return valor_retorno;
 }
 
 
@@ -338,13 +333,16 @@ int guardar_caminho_save(char* caminho) {
 /* =                UTILITÁRIOS DE PESQUISA                 = */
 /* ========================================================== */
 
+// !TODO: Mostrar aqui
 int procurar_participante_por_id(t_participante** participantes, int numero_participantes, int id_procurado) {
+    int valor_return = ERRO;
     for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->identificador == id_procurado) {
-            return i;
+            valor_return = i;
+            break;
         }
     }
-    return -1;
+    return valor_return;
 }
 
 int procurar_atividade_por_id(t_atividade** atividades, int numero_atividades, int id_procurado) {

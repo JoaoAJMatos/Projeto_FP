@@ -24,7 +24,7 @@
 #endif                                          // _WIN32
 
 #define ESCAPE_CODE_LIMPAR_CONSOLA \
-                      "\033[H\033[J"            // ANSI escape code para limpar a consola
+                      "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
 
 #define limpar_ecra() \
     printf(ESCAPE_CODE_LIMPAR_CONSOLA)          // Definir uma macro para limpar o ecrã
@@ -129,7 +129,7 @@ int  ler_opcao_menu(t_menu*);                                   // Ler uma opç�
 /// FORMULÁRIOS ///
 t_formulario_input* criar_formulario_input(char*, char*, char**, int, void*, t_tipo_estrutura);
 void desenhar_formulario_input(t_formulario_input*);            // Desenhar um formulário de input
-int  ler_formulario_input(t_formulario_input*, t_estado_programa*);                 // Lê os campos do formulário de input e guarda os dados na estrutura
+void* ler_formulario_input(t_formulario_input*, t_estado_programa*);                 // Lê os campos do formulário de input e guarda os dados na estrutura
 
 
 /// AÇÕES RÁPIDAS ///
