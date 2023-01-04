@@ -8,7 +8,9 @@
  * 
  */
 
+// TODO: Adicionar mensagem de erro à estrutura do estado do programa (fazer algo semelhante ao GetLastError do Windows)
 // TODO: Fazer testes do processo de salvar/carregar a aplicação, incluindo as funções do fs que são usadas
+// TODO: Remover early returns das funcoes
 
 #include <stdio.h>
 
@@ -40,7 +42,7 @@ int  inserir_participante(t_estado_programa*);
 void editar_participante(t_estado_programa*);
 void eliminar_participante(t_estado_programa*);
 
-int  inserir_atividade(t_estado_programa*);
+void inserir_atividade(t_estado_programa*);
 void editar_atividade(t_estado_programa*);
 void eliminar_atividade(t_estado_programa*);
 
@@ -139,7 +141,7 @@ int main() {
 
 #if DEBUG
     // Insere alguns dados para testes
-    //inserir_dados_teste(estado_programa);
+    inserir_dados_teste(estado_programa);
 #else
     /// CARREGAR O ESTADO DO PROGRAMA DO DISCO ///
     if (carregar_dados(caminho_save, estado_programa) < 0) {
@@ -302,7 +304,15 @@ int inserir_participante(t_estado_programa* estado_programa) {
 
     formulario_participante = criar_formulario_input("Gestão de Participantes", "Insira os dados do novo participante", campos_formulario_participante, 6, &participante, PARTICIPANTE);
     desenhar_formulario_input(formulario_participante);
-    ler_formulario_input(formulario_participante, estado_programa);
+    participante = ler_formulario_input(formulario_participante, estado_programa);
+    mostrar_participante(participante);
+    fflush(stdin);
+    getchar();
+
+    if (participante == NULL) {
+        alerta("Erro", "Não foi possível inserir o participante", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
+        return ERRO;
+    }
 
     estado_programa->participantes[*estado_programa->numero_participantes_inseridos] = participante;
     (*estado_programa->numero_participantes_inseridos)++;
@@ -348,15 +358,14 @@ void listar_participantes(t_estado_programa* estado_programa) {
         return;
     }
 
-    /*for (i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
+    for (i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
         participante = estado_programa->participantes[i];
         printf("======================================\n");
         printf("Participante %d:\n\n", i + 1);
         mostrar_participante(participante);
         printf("======================================\n");
-    }*/
+    }
 
-    mostrar_estado_programa(estado_programa);
     fflush(stdin);
     getchar();
 }
@@ -381,9 +390,6 @@ void menu_participantes(t_estado_programa* estado_programa) {
         switch (opcao) {
             case INSERIR_PARTICIPANTE:
                 inserir_participante(estado_programa);
-                mostrar_estado_programa(estado_programa);
-                fflush(stdin);
-                getchar();
                 break;
             case EDITAR_PARTICIPANTE:
                 editar_participante(estado_programa);
@@ -401,24 +407,23 @@ void menu_participantes(t_estado_programa* estado_programa) {
 }
 
 
-int inserir_atividade(t_estado_programa* estado_programa) {
+void inserir_atividade(t_estado_programa* estado_programa) {
     t_formulario_input* formulario_atividade;
     char* campos_formulario_atividade[]    = {"Identificador", "Designação","Data","Hora","Local","Tipo", "Associacao de Estudantes", "Valor"};
     t_atividade* atividade;
 
     if (*estado_programa->numero_atividadades_inseridas == NUMERO_MAXIMO_DE_ATIVIDAES) {
         alerta("Erro", "Não é possível adicionar mais atividades", COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA);
-        return ERRO;
+        return;
     }
 
     formulario_atividade = criar_formulario_input("Gestão de Atividades", "Insira os dados da nova atividade", campos_formulario_atividade, 8, &atividade, ATIVIDADE);
     desenhar_formulario_input(formulario_atividade);
+
     ler_formulario_input(formulario_atividade, estado_programa);
 
     estado_programa->atividades[*estado_programa->numero_atividadades_inseridas] = atividade;
     (*estado_programa->numero_atividadades_inseridas)++;
-
-    return OK;
 }
 
 void menu_atividades(t_estado_programa* estado_programa) {
@@ -497,6 +502,10 @@ void menu_inscricoes(t_estado_programa* estado_programa) {
 
 /* ========================================================== */
 
+/**
+ * @brief Esta função insere alguns dados de teste no estado do programa, é chamada quando a flag de DEBUG está ativa
+ * @param estado_programa
+ */
 void inserir_dados_teste(t_estado_programa* estado_programa) {
     t_participante *participante1 = criar_participante(1, "Joao", "ESTG", 123, "mail@mail.com", 123456789);
     t_atividade *atividade1 = criar_atividade(2, "Descida do rio", "30/04/2023", "10:40", "Tejo", "Lazer", "AE-ESTG", 15);
