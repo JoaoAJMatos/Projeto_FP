@@ -77,7 +77,6 @@ typedef enum {
 typedef enum {
     INSERIR_PARTICIPANTE = 1,
     EDITAR_PARTICIPANTE,
-    REMOVER_PARTICIPANTE,
     LISTAR_PARTICIPANTES,
     VOLTAR_MENU_PARTICIPANTES,
 } t_opcao_menu_participantes;
@@ -85,7 +84,6 @@ typedef enum {
 typedef enum {
     INSERIR_ATIVIDADE = 1,
     EDITAR_ATIVIDADE,
-    REMOVER_ATIVIDADE,
     LISTAR_ATIVIDADES,
     VOLTAR_MENU_ATIVIDADES,
 } t_opcao_menu_atividades;
@@ -93,7 +91,6 @@ typedef enum {
 typedef enum {
     INSERIR_INSCRICAO = 1,
     EDITAR_INSCRICAO,
-    REMOVER_INSCRICAO,
     LISTAR_INSCRICOES,
     VOLTAR_MENU_INSCRICOES,
 } t_opcao_menu_inscricoes;
@@ -371,8 +368,8 @@ void listar_participantes(t_estado_programa* estado_programa) {
  */
 void menu_participantes(t_estado_programa* estado_programa) {
     t_menu* menu_participantes;
-    char* opcoes_menu_participantes[] = {"1. Criar Participante","2. Editar Participante","3. Eliminar Participante","4. Mostrar Participantes","5. Voltar"};
-    menu_participantes = criar_menu("PROJETO FP", "Gestão de Participantes", opcoes_menu_participantes, 5, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+    char* opcoes_menu_participantes[] = {"1. Criar Participante","2. Editar Participante","3. Mostrar Participantes","4. Voltar"};
+    menu_participantes = criar_menu("PROJETO FP", "Gestão de Participantes", opcoes_menu_participantes, 4, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
     t_opcao_menu_participantes opcao;
 
     do {
@@ -387,9 +384,6 @@ void menu_participantes(t_estado_programa* estado_programa) {
                 break;
             case EDITAR_PARTICIPANTE:
                 editar_participante(estado_programa);
-                break;
-            case REMOVER_PARTICIPANTE:
-                //eliminar_participante(estado_programa);
                 break;
             case LISTAR_PARTICIPANTES:
                 listar_participantes(estado_programa);
@@ -423,8 +417,8 @@ int inserir_atividade(t_estado_programa* estado_programa) {
 
 void menu_atividades(t_estado_programa* estado_programa) {
     t_menu* menu_atividades;
-    char* opcoes_menu_atividades[] = {"1. Criar Atividade","2. Editar Atividade","3. Eliminar Atividade","4. Mostrar Atividades","5. Voltar"};
-    menu_atividades = criar_menu("PROJETO FP", "Gestão de Atividades", opcoes_menu_atividades, 5, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+    char* opcoes_menu_atividades[] = {"1. Criar Atividade","2. Editar Atividade","3. Mostrar Atividades","4. Voltar"};
+    menu_atividades = criar_menu("PROJETO FP", "Gestão de Atividades", opcoes_menu_atividades, 4, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
     t_opcao_menu_atividades opcao;
 
     do {
@@ -436,9 +430,6 @@ void menu_atividades(t_estado_programa* estado_programa) {
                 break;
             case EDITAR_ATIVIDADE:
                 //editar_atividade(estado_programa);
-                break;
-            case REMOVER_ATIVIDADE:
-                //eliminar_atividade(estado_programa);
                 break;
             case LISTAR_ATIVIDADES:
                 //listar_atividades(estado_programa);
@@ -469,8 +460,8 @@ void inserir_inscricao(t_estado_programa* estado_programa) {
 
 void menu_inscricoes(t_estado_programa* estado_programa) {
     t_menu* menu_inscricoes;
-    char* opcoes_menu_inscricoes[] = {"1. Criar Inscricao","2. Editar Inscricao","3. Eliminar Inscricao","4. Mostrar Inscricoes","5. Voltar"};
-    menu_inscricoes = criar_menu("PROJETO FP", "Gestão de Inscricoes", opcoes_menu_inscricoes, 5, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
+    char* opcoes_menu_inscricoes[] = {"1. Criar Inscricao","2. Editar Inscricao","3. Mostrar Inscricoes","4. Voltar"};
+    menu_inscricoes = criar_menu("PROJETO FP", "Gestão de Inscricoes", opcoes_menu_inscricoes, 4, "Insira a opção", "Opção inválida", 40, 20, 1, COR_TEXTO_PROGRAMA, COR_FUNDO_PROGRAMA, 1);
     t_opcao_menu_inscricoes opcao;
 
     do {
@@ -482,9 +473,6 @@ void menu_inscricoes(t_estado_programa* estado_programa) {
                 break;
             case EDITAR_INSCRICAO:
                 //editar_inscricao(estado_programa);
-                break;
-            case REMOVER_INSCRICAO:
-                //eliminar_inscricao(estado_programa);
                 break;
             case LISTAR_INSCRICOES:
                 //listar_inscricoes(estado_programa);
