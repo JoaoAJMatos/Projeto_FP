@@ -106,7 +106,7 @@ t_atividade* criar_atividade(int identificador, char* designacao, char* data, ch
  * @param atividade
  */
 void libertar_atividade(t_atividade* atividade) {
-    libertar_memoria(atividade->designacao, atividade->data, atividade->hora, atividade->local, atividade->tipo, atividade->associacao_estudantes, NULL);
+    free(atividade);
 }
 
 /**
@@ -198,21 +198,9 @@ t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t
 }
 
 void libertar_estado_programa(t_estado_programa* estado_programa) {
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++)
-        libertar_participante(estado_programa->participantes[i]);
-
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++)
-        libertar_atividade(estado_programa->atividades[i]);
-
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++)
-        libertar_inscricao(estado_programa->inscricoes[i]);
-
-    free(estado_programa->participantes);
-    free(estado_programa->atividades);
-    free(estado_programa->inscricoes);
-    free(estado_programa->numero_participantes_inseridos);
-    free(estado_programa->numero_atividadades_inseridas);
-    free(estado_programa->numero_de_inscricoes);
+    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) libertar_participante(estado_programa->participantes[i]);
+    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) libertar_atividade(estado_programa->atividades[i]);
+    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
     free(estado_programa);
 }
 
@@ -279,17 +267,21 @@ t_estado_programa* carregar_estado_programa(char* nome_ficheiro) {
 
 /* ========================================================== */
 
+
 /* ========================================================== */
 /* =                UTILITÁRIOS DE PESQUISA                 = */
 /* ========================================================== */
 
+// !TODO: Mostrar aqui
 int procurar_participante_por_id(t_participante** participantes, int numero_participantes, int id_procurado) {
+    int valor_return = ERRO;
     for (int i = 0; i < numero_participantes; i++) {
         if (participantes[i]->identificador == id_procurado) {
-            return i;
+            valor_return = i;
+            break;
         }
     }
-    return -1;
+    return valor_return;
 }
 
 int procurar_atividade_por_id(t_atividade** atividades, int numero_atividades, int id_procurado) {

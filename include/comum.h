@@ -5,6 +5,8 @@
 #ifndef PROJETO1_COMUM_H
 #define PROJETO1_COMUM_H
 
+#include <assert.h>
+
 #if defined(__aarch64__)
 #define __inline__ __attribute__((always_inline)) // A keyword "inline" parecia causar problemas com o GCC na minha
                                                   // máquina arm64, então eu apenas redefino a constante aqui
@@ -13,14 +15,8 @@
 #endif // defined(__aarch64__)
 
 #undef OK
-
-/**
- * Enumeração para para os diferentes estados de uma função.
- */
-enum {
-    ERRO = -1,
-    OK = 0
-};
+#define OK 0
+#define ERRO (-1)
 
 #define DEBUG 1
 

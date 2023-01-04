@@ -24,7 +24,7 @@ static void esperar_input_do_utilizador(char*, int, int);          // Espera que
 
 static void escrever_linha(int, int, int, char);                   // Escreve uma linha na consola
 
-static t_participante * ler_participante();                     // Lê um participante do formulário de input
+static t_participante* ler_participante();                      // Lê um participante do formulário de input
 static t_atividade*  ler_atividade();                           // Lê uma atividade do formulário de input
 static t_inscricao*  ler_inscricao(t_estado_programa*);         // Lê uma inscrição do formulário de input
 
@@ -319,7 +319,9 @@ void desenhar_formulario_input(t_formulario_input* formulario) {
 }
 
 t_participante* ler_participante() {
-    char nome[50], email[50], escola[8];
+    // É necessário alocar memória manualmente para as strings visto que criamos as variaveis dentro da função
+    // de modo a evitar que o seu conteúdo não esteja disponível fora da função (NOTA: libertar memória manualmente)
+    char* nome = malloc(sizeof(char) * 50), *email = malloc(sizeof(char) * 50), *escola = malloc(sizeof(char) * 10);
     int nif, telefone, identificador;
     t_participante* participante;
 
@@ -335,10 +337,12 @@ t_participante* ler_participante() {
 }
 
 t_atividade* ler_atividade() {
-    char designacao[50], data[11], hora[6], local[50], tipo[50], associacao_estudantes[20];
+    char* designacao = malloc(sizeof(char) * 50), *data = malloc(sizeof(char) * 11),
+               *hora = malloc(sizeof(char) * 6), *tipo = malloc(sizeof(char) * 10),
+               *associacao_estudantes = malloc(sizeof(char) * 10), *local = malloc(sizeof(char) * 50);
+
     int identificador;
     float valor;
-
     t_atividade *atividade;
 
     ler_identificador(&identificador, 7);
@@ -367,22 +371,24 @@ t_inscricao* ler_inscricao(t_estado_programa* estado_programa) {
     return inscricao;
 }
 
-int ler_formulario_input(t_formulario_input* formulario, t_estado_programa* estado_programa) {
-    void* estrutura_output = formulario->estrutura_output;
 
+void* ler_formulario_input(t_formulario_input* formulario, t_estado_programa* estado_programa) {
+    t_participante* participante;
     switch (formulario->tipo_estrutura_output) {
         case PARTICIPANTE:
-            estrutura_output = ler_participante();
-            break;
+            // Cast the void pointer to the correct type
+            participante = (t_participante*) formulario->estrutura_output;
+            participante = ler_participante();
+            mostrar_participante(participante);
+            fflush(stdin);
+            getchar();
+            return participante;
         case ATIVIDADE:
-            estrutura_output = ler_atividade();
-            break;
+            return ler_atividade();
         case INSCRICAO:
-            estrutura_output = ler_inscricao(estado_programa);
-            break;
-    }   // Sem caso default para que o compilador nos avise de casos não tratados
-
-    return 1;
+            return ler_inscricao(estado_programa);
+    }
+    assert(0);
 }
 
 
@@ -415,7 +421,6 @@ void prompt(char* mensagem, char* subtitulo, char* dica, void* variavel_output, 
     // Ler input do utilizador
     gotoxy(posicao_x + strlen(dica) + 5, posicao_y + 5);
     ler_input_do_prompt(variavel_output, tipo_variavel_output);
-
     limpar_formatacao();
 }
 
@@ -680,11 +685,7 @@ static void ler_escola(char* escola, int pos_y) {
 
 static void ler_nif(int* nif, int pos_y) {
     // Ignorar a verificação do NIF em modo debug
-    #if DEBUG
-        gotoxy(6, pos_y);
-        scanf("%d", nif);
-    #else
-        do {
+    do {
         gotoxy(6, pos_y);
         scanf("%d", nif);
         if (!(nif_valido(*nif))) {
@@ -695,7 +696,6 @@ static void ler_nif(int* nif, int pos_y) {
             escrever_linha(6, pos_y, 50, ' ');
         }
     } while (!(nif_valido(*nif)));
-    #endif
 }
 
 static void ler_email(char* email, int pos_y) {

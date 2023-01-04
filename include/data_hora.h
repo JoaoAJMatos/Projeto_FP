@@ -30,4 +30,7 @@ int obter_ano_atual();
 char* obter_data_atual();
 char* obter_hora_atual_completa();
 
+int timestamp();
+int data_para_timestamp(char*);
+
 #endif //PROJETO1_DATA_HORA_H
