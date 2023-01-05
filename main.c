@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 // A keyword "inline" parecia causar problemas com o GCC na minha
 // máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
@@ -31,6 +32,7 @@
 /// MACROS ///
 #define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
 #define limpar_ecra() printf(ESCAPE_CODE_LIMPAR_CONSOLA)     // Definir uma macro para limpar o ecrã
+#define obter_timestamp() time(NULL)                         // Defini uma macro para obter umaa timestamp
 #define TESTE 1                                              // Flag de teste
 
 // Ficheiros //
@@ -341,11 +343,12 @@ bool_t ficheiro_existe(const char* caminho) {
  */
 void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de participantes inseridos
+    int indice;
     fwrite(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
 
     // Guardar os participantes
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        fwrite(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        fwrite(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
@@ -357,41 +360,58 @@ void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
  */
 void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de atividades inseridas
+    int indice;
     fwrite(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
 
     // Guardar as atividades
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        fwrite(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        fwrite(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
 /* ========================================================== */
 
 void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
+    // Guardar o número de inscrições inseridas
+    int indice;
     fwrite(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        fwrite(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
+
+    // Guardar as inscrições
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        fwrite(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
 void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
+    // Carregar o número de participantes inseridos
+    int indice;
     fread(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        fread(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
+
+    // Carregar os participantes
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        fread(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
 void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
+    // Carregar o número de atividades inseridas
+    int indice;
     fread(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        fread(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
+
+    // Carregar as atividades
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        fread(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
 void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
+    // Carregar o número de inscrições inseridas
+    int indice;
     fread(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        fread(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
+
+    // Carregar as inscrições
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        fread(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
@@ -586,9 +606,10 @@ estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, a
 }
 
 void libertar_estado_programa(estado_programa_t* estado_programa) {
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) libertar_participante(estado_programa->participantes[i]);
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) libertar_atividade(estado_programa->atividades[i]);
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
+    int indice;
+    for (indice= 0; indice < *estado_programa->numero_de_participantes; indice++) libertar_participante(estado_programa->participantes[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_atividades; indice++) libertar_atividade(estado_programa->atividades[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) libertar_inscricao(estado_programa->inscricoes[indice]);
     free(estado_programa);
 }
 
@@ -597,19 +618,19 @@ inline_ void libertar_participante(participante_t* participante) {free(participa
 inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
 inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
-
 void mostrar_estado_programa(estado_programa_t* estado_programa) {
+    int indice;
     printf("Participantes:\n");
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        mostrar_participante(estado_programa->participantes[i]);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        mostrar_participante(estado_programa->participantes[indice]);
     }
     printf("Atividades:\n");
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        mostrar_atividade(estado_programa->atividades[i]);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        mostrar_atividade(estado_programa->atividades[indice]);
     }
     printf("Inscrições:\n");
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        mostrar_inscricao(estado_programa->inscricoes[i]);
+    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        mostrar_inscricao(estado_programa->inscricoes[indice]);
     }
 }
 
@@ -715,4 +736,24 @@ bool_t confirmar_saida(estado_programa_t* estado_programa) {
     } while (confirmacao != 's' && confirmacao != 'n');
 
     return confirmacao;
+}
+
+
+/* ========================================================== */
+
+char* obter_data_atual() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    char* data_atual = (char*) malloc(sizeof(char) * 11);
+    sprintf(data_atual, "%02d/%02d/%04d", data->tm_mday, data->tm_mon + 1, data->tm_year + 1900); // Formato DD/MM/AAAA
+    return data_atual;
+}
+
+
+char* obter_hora_atual_com_segundos() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    char* hora_atual = (char*) malloc(sizeof(char) * 9);
+    sprintf(hora_atual, "%d:%d:%d", data->tm_hour, data->tm_min, data->tm_sec);
+    return hora_atual;
 }
