@@ -236,11 +236,12 @@ bool_t ficheiro_existe(const char* caminho) {
  */
 void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de participantes inseridos
+    int indice;
     fwrite(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
 
     // Guardar os participantes
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        fwrite(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        fwrite(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
@@ -252,11 +253,12 @@ void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
  */
 void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de atividades inseridas
+    int indice;
     fwrite(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
 
     // Guardar as atividades
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        fwrite(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        fwrite(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
@@ -268,41 +270,45 @@ void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
  */
 void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de inscrições inseridas
+    int indice;
     fwrite(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
 
     // Guardar as inscrições
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        fwrite(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        fwrite(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
 void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de participantes inseridos
+    int indice;
     fread(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
 
     // Carregar os participantes
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        fread(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        fread(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
 void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de atividades inseridas
+    int indice;
     fread(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
 
     // Carregar as atividades
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        fread(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        fread(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
 void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de inscrições inseridas
+    int indice;
     fread(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
 
     // Carregar as inscrições
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        fread(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        fread(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
@@ -432,9 +438,10 @@ t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t
 }
 
 void libertar_estado_programa(t_estado_programa* estado_programa) {
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) libertar_participante(estado_programa->participantes[i]);
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) libertar_atividade(estado_programa->atividades[i]);
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
+    int indice;
+    for (indice= 0; indice < *estado_programa->numero_participantes_inseridos; indice++) libertar_participante(estado_programa->participantes[indice]);
+    for (indice= 0; indice < *estado_programa->numero_atividadades_inseridas; indice++) libertar_atividade(estado_programa->atividades[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) libertar_inscricao(estado_programa->inscricoes[indice]);
     free(estado_programa);
 }
 
@@ -465,18 +472,22 @@ inline_ void libertar_inscricao(t_inscricao* inscricao) {
 }
 
 void mostrar_estado_programa(t_estado_programa* estado_programa) {
+    int indice;
     printf("Participantes:\n");
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
-        mostrar_participante(estado_programa->participantes[i]);
+    
+    for (indice = 0; indice < *estado_programa->numero_participantes_inseridos; indice++) {
+        mostrar_participante(estado_programa->participantes[indice]);
     }
     printf("Atividades:\n");
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) {
-        mostrar_atividade(estado_programa->atividades[i]);
+    for (indice= 0; indice < *estado_programa->numero_atividadades_inseridas; indice++) {
+        mostrar_atividade(estado_programa->atividades[indice]);
     }
     printf("Inscrições:\n");
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        mostrar_inscricao(estado_programa->inscricoes[i]);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        mostrar_inscricao(estado_programa->inscricoes[indice]);
     }
+    }
+    
 
     /**
  * @brief Mostra um participante
