@@ -162,9 +162,17 @@ codigo_erro_t guardar_dados(const char*, estado_programa_t*);
 
 /* ========================================================== */
 
-void inserir_participante(estado_programa_t*);
-void inserir_atividade(estado_programa_t*);
-void inserir_inscricao(estado_programa_t*);
+void  ler_string(const char*, char*, int);
+int   ler_inteiro_intervalo(const char*, int, int);
+float ler_float_intervalo(const char*, float, float);
+
+participante_t* ler_participante(estado_programa_t*);
+atividade_t* ler_atividade(estado_programa_t*);
+inscricao_t* ler_inscricao(estado_programa_t*);
+
+codigo_erro_t inserir_participante(estado_programa_t*);
+codigo_erro_t inserir_atividade(estado_programa_t*);
+codigo_erro_t inserir_inscricao(estado_programa_t*);
 
 /* ========================================================== */
 
@@ -172,6 +180,10 @@ void inicializar_vetores(estado_programa_t*);
 bool_t ficheiro_existe(const char*);
 
 /* ========================================================== */
+
+void listar_participantes(estado_programa_t*);
+void listar_atividades(estado_programa_t*);
+void listar_inscricoes(estado_programa_t*);
 
 
 
@@ -205,7 +217,6 @@ int main() {
     /// LOOP PRINCIPAL ///
     do {
         limpar_ecra();
-        menu_principal(estado_programa);
     } while(confirmacao_saida != 'S');
 
     return OK;
@@ -359,6 +370,67 @@ codigo_erro_t carregar_dados(const char* caminho, estado_programa_t* estado_prog
     if (ficheiro_existe(caminho)) {
         estado_programa = carregar_estado_programa(caminho);
         if (estado_programa != NULL) resultado = OK;
+    }
+
+    return resultado;
+}
+
+/// INSERÇÃO DE DADOS ///
+
+participante_t* ler_participante(estado_programa_t* estado_programa) {
+    int id = *estado_programa->numero_de_participantes;
+    char nome[TAMANHO_MAXIMO_NOME];
+}
+
+/**
+ * @brief Insere um participante no vetor de participantes
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
+    codigo_erro_t resultado = ERRO;
+    participante_t* participante = ler_participante(estado_programa);
+
+    if (participante != NULL) {
+        estado_programa->participantes[*estado_programa->numero_de_participantes] = *participante;
+        (*estado_programa->numero_de_participantes)++;
+        resultado = OK;
+    }
+
+    return resultado;
+}
+
+/**
+ * @brief Insere uma atividade no vetor de atividades
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
+    codigo_erro_t resultado = ERRO;
+    atividade_t* atividade = ler_atividade(estado_programa);
+
+    if (atividade != NULL) {
+        estado_programa->atividades[*estado_programa->numero_de_atividades] = *atividade;
+        (*estado_programa->numero_de_atividades)++;
+        resultado = OK;
+    }
+
+    return resultado;
+}
+
+/**
+ * @brief Insere uma inscrição no vetor de inscrições
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
+    codigo_erro_t resultado = ERRO;
+    inscricao_t* inscricao = ler_inscricao(estado_programa);
+
+    if (inscricao != NULL) {
+        estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = *inscricao;
+        (*estado_programa->numero_de_inscricoes)++;
+        resultado = OK;
     }
 
     return resultado;
