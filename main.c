@@ -30,6 +30,7 @@
 /// MACROS ///
 #define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
 #define limpar_ecra() printf(ESCAPE_CODE_LIMPAR_CONSOLA)     // Definir uma macro para limpar o ecrã
+#define obter_timestamp() time(NULL)                         // Defini uma macro para obter umaa timestamp
 #define TESTE 1                                              // Flag de teste
 
 // Ficheiros //
@@ -603,3 +604,23 @@ inline_ void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Data: %s\n", inscricao->data);
     printf("    Hora: %s\n", inscricao->hora);
 }
+
+/* ========================================================== */
+
+char* obter_data_atual() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    char* data_atual = (char*) malloc(sizeof(char) * 11);
+    sprintf(data_atual, "%02d/%02d/%04d", data->tm_mday, data->tm_mon + 1, data->tm_year + 1900); // Formato DD/MM/AAAA
+    return data_atual;
+}
+
+
+char* obter_hora_atual_com_segundos() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    char* hora_atual = (char*) malloc(sizeof(char) * 9);
+    sprintf(hora_atual, "%d:%d:%d", data->tm_hour, data->tm_min, data->tm_sec);
+    return hora_atual;
+}
+
