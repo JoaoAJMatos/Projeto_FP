@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <time.h>
 
 // A keyword "inline" parecia causar problemas com o GCC na minha
 // máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
@@ -64,7 +66,10 @@ typedef enum {
     ERRO = -1
 } codigo_erro_t;
 
-typedef enum {
+// ENUMERAÇÕES //
+// Enumerações com as opções de cada menu do programa
+
+typedef enum {                          // Menu principal
     MENU_PARTICIPANTES = 1,
     MENU_ATIVIDADES,
     MENU_INSCRICAO,
@@ -72,6 +77,34 @@ typedef enum {
     SALVAR,
     SAIR
 } opcao_menu_principal_t;
+
+typedef enum {                          // Menu de participantes
+    INSERIR_PARTICIPANTE = 1,
+    REMOVER_PARTICIPANTE,
+    LISTAR_PARTICIPANTES,
+    VOLTAR_MENU_PRINCIPAL_PARTICIPANTES
+} opcao_menu_participantes_t;
+
+typedef enum {                          // Menu de atividades
+    INSERIR_ATIVIDADE = 1,
+    REMOVER_ATIVIDADE,
+    LISTAR_ATIVIDADES,
+    VOLTAR_MENU_PRINCIPAL_ATIVIDADES
+} opcao_menu_atividades_t;
+
+typedef enum {                          // Menu de inscrições
+    INSCREVER_PARTICIPANTE = 1,
+    REMOVER_INSCRICAO,
+    LISTAR_INSCRICOES,
+    VOLTAR_MENU_PRINCIPAL_INSCRICOES
+} opcao_menu_inscricoes_t;
+
+typedef enum {                          // Menu de estatísticas
+    NUMERO_DE_ATIVIDADES_POR_ASSOCIACAO = 1,
+    PERCENTAGEM_DE_INSCRICOES_POR_ESCOLA,
+    VALOR_TOTAL_DAS_INSCRICOES_EM_HORIZONTE_TEMPORAL,
+    VOLTAR_MENU_PRINCIPAL_ESTATISTICAS
+} opcao_menu_estatisticas_t;
 
 
 /* ========================================================== */
@@ -136,7 +169,6 @@ typedef struct {
 /* =                      PROTÓTIPOS                        = */
 /* ========================================================== */
 
-// TODO: Criar implementações para estas funções
 participante_t* criar_participante(char*, char*, int, char*, int, estado_programa_t*);
 atividade_t* criar_atividade(char*, char*, char*, char*, char*, char*, float, estado_programa_t*);
 inscricao_t* criar_inscricao(int, int, estado_programa_t*);
@@ -176,6 +208,7 @@ codigo_erro_t guardar_dados(const char*, estado_programa_t*);
 void  ler_string(const char*, char*, int);
 int   ler_inteiro_intervalo(const char*, int, int);
 float ler_float_intervalo(const char*, float, float);
+char  ler_char(const char*);
 
 participante_t* ler_participante(estado_programa_t*);
 atividade_t* ler_atividade(estado_programa_t*);
@@ -211,7 +244,12 @@ int timestamp();
 
 /* ========================================================== */
 
+bool_t confirmar_saida(estado_programa_t*);
 opcao_menu_principal_t menu_principal();
+void menu_participantes(estado_programa_t*);
+void menu_atividades(estado_programa_t*);
+void menu_inscricoes(estado_programa_t*);
+void menu_estatisticas(estado_programa_t*);
 
 
 
@@ -224,12 +262,13 @@ int main() {
     int numero_de_participantes = 0;
     int numero_de_atividades = 0;
     int numero_de_inscricoes = 0;
-    char confirmacao_saida;
 
     participante_t* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
     atividade_t*    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
     inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
     bool_t         dados_guardados = FALSE;
+    bool_t         sair = FALSE;
+    opcao_menu_principal_t opcao_menu;
 
     /// ESTADO DO PROGRAMA  ///
     // Criação do estado do programa
@@ -245,7 +284,36 @@ int main() {
     /// LOOP PRINCIPAL ///
     do {
         limpar_ecra();
-    } while(confirmacao_saida != 'S');
+        opcao_menu = menu_principal();
+
+        switch (opcao_menu) {
+            case MENU_PARTICIPANTES:
+                menu_participantes(estado_programa);
+                break;
+            case MENU_ATIVIDADES:
+                menu_atividades(estado_programa);
+                break;
+            case MENU_INSCRICAO:
+                menu_inscricoes(estado_programa);
+                break;
+            case ESTATISTICAS:
+                menu_estatisticas(estado_programa);
+                break;
+            case SALVAR:
+                if (estado_programa->dados_guardados == FALSE) {
+                    if (guardar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
+                        printf("Erro ao guardar dados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                    } else {
+                        printf("Dados guardados com sucesso no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                    }
+                } else {    // Se os dados já tiverem sido guardados
+                    printf("Os dados já se encontram guardados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                }
+                break;
+            case SAIR:
+                sair = confirmar_saida(estado_programa);
+        } // Sem caso default para que o compilador nos avise de casos não tratados
+    } while(!sair);
 
     return OK;
 }
@@ -390,6 +458,11 @@ estado_programa_t* carregar_estado_programa(const char* caminho) {
     return estado_programa;
 }
 
+codigo_erro_t guardar_dados(const char* caminho, estado_programa_t* estado_programa) {
+    codigo_erro_t codigo_erro = guardar_estado_programa(caminho, estado_programa);
+    return codigo_erro;
+}
+
 /**
  * @brief Carrega os dados do programa salvos no ficheiro save e guarda-os na estrutura do estado do programa.
  * @param caminho
@@ -470,7 +543,7 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
 }
 
 
-/* ========================================================== app.c*/
+/* ========================================================== */
 
 participante_t* criar_participante(char* nome, char* escola, int nif, char* email, int telefone, estado_programa_t* estado_programa) {
     participante_t* participante = (participante_t*) malloc(sizeof(participante_t));
@@ -532,10 +605,10 @@ estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, a
     return estado_programa;
 }
 
-void libertar_estado_programa(t_estado_programa* estado_programa) {
+void libertar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
-    for (indice= 0; indice < *estado_programa->numero_participantes_inseridos; indice++) libertar_participante(estado_programa->participantes[indice]);
-    for (indice= 0; indice < *estado_programa->numero_atividadades_inseridas; indice++) libertar_atividade(estado_programa->atividades[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_participantes; indice++) libertar_participante(estado_programa->participantes[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_atividades; indice++) libertar_atividade(estado_programa->atividades[indice]);
     for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) libertar_inscricao(estado_programa->inscricoes[indice]);
     free(estado_programa);
 }
@@ -545,19 +618,18 @@ inline_ void libertar_participante(participante_t* participante) {free(participa
 inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
 inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
-void mostrar_estado_programa(t_estado_programa* estado_programa) {
+void mostrar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
     printf("Participantes:\n");
-    
-    for (indice = 0; indice < *estado_programa->numero_participantes_inseridos; indice++) {
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
         mostrar_participante(estado_programa->participantes[indice]);
     }
     printf("Atividades:\n");
-    for (indice= 0; indice < *estado_programa->numero_atividadades_inseridas; indice++) {
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
         mostrar_atividade(estado_programa->atividades[indice]);
     }
     printf("Inscrições:\n");
-    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
         mostrar_inscricao(estado_programa->inscricoes[indice]);
     }
 }
@@ -607,6 +679,68 @@ inline_ void mostrar_inscricao(inscricao_t* inscricao) {
 
 /* ========================================================== */
 
+void ler_string(const char* mensagem, char* string, int tamanho) {
+    printf("%s", mensagem);
+    fgets(string, tamanho, stdin);
+    string[strcspn(string, "\n")] = '\0';
+}
+
+int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo) {
+    int inteiro;
+
+    do {
+        printf("%s", mensagem);
+        scanf("%d", &inteiro);
+        getchar();
+        if (inteiro < minimo || inteiro > maximo)
+            printf("Valor inválido. Introduza um valor entre %d e %d.\n", minimo, maximo);
+
+    } while (inteiro < minimo || inteiro > maximo);
+
+    return inteiro;
+}
+
+float ler_float_intervalo(const char* mensagem, float minimo, float maximo) {
+    float flutuante;
+
+    do {
+        printf("%s", mensagem);
+        scanf("%f", &flutuante);
+        getchar();
+        if (flutuante < minimo || flutuante > maximo)
+            printf("Valor inválido. Introduza um valor entre %.2f e %.2f.\n", minimo, maximo);
+
+    } while (flutuante < minimo || flutuante > maximo);
+
+    return flutuante;
+}
+
+char ler_char(const char* mensagem) {
+    char caracter;
+    printf("%s", mensagem);
+    scanf(" %c", &caracter);
+    return caracter;
+}
+
+bool_t confirmar_saida(estado_programa_t* estado_programa) {
+    bool_t confirmacao;
+    char mensagem[100];
+    estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ")
+                                     : strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ");
+
+    do {
+        confirmacao = ler_char(mensagem);
+        confirmacao = tolower(confirmacao);
+        if (confirmacao != 's' && confirmacao != 'n')
+            printf("Valor inválido. Introduza 's' para sim ou 'n' para não.\n");
+    } while (confirmacao != 's' && confirmacao != 'n');
+
+    return confirmacao;
+}
+
+
+/* ========================================================== */
+
 char* obter_data_atual() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
@@ -623,4 +757,3 @@ char* obter_hora_atual_com_segundos() {
     sprintf(hora_atual, "%d:%d:%d", data->tm_hour, data->tm_min, data->tm_sec);
     return hora_atual;
 }
-
