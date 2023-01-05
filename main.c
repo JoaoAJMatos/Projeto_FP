@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // A keyword "inline" parecia causar problemas com o GCC na minha
 // máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
@@ -62,6 +63,15 @@ typedef enum {
     ERRO = -1
 } codigo_erro_t;
 
+typedef enum {
+    MENU_PARTICIPANTES = 1,
+    MENU_ATIVIDADES,
+    MENU_INSCRICAO,
+    ESTATISTICAS,
+    SALVAR,
+    SAIR
+} opcao_menu_principal_t;
+
 
 /* ========================================================== */
 /* =                      ESTRUTURAS                        = */
@@ -108,9 +118,9 @@ typedef struct {
  * Desta forma, o estado do programa é acessível a todas as funções que o precisam de manipular ou consultar.
  */
 typedef struct {
-    participante_t participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];   // Vetor de participantes
-    atividade_t    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];          // Vetor de atividades
-    inscricao_t    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];         // Vetor de inscrições
+    participante_t** participantes;   // Vetor de participantes
+    atividade_t**    atividades;      // Vetor de atividades
+    inscricao_t**    inscricoes;      // Vetor de inscrições
     int*           numero_de_participantes;                         // Contadores
     int*           numero_de_atividades;
     int*           numero_de_inscricoes;
@@ -129,7 +139,7 @@ typedef struct {
 participante_t* criar_participante(char*, char*, int, char*, int, estado_programa_t*);
 atividade_t* criar_atividade(char*, char*, char*, char*, char*, char*, float, estado_programa_t*);
 inscricao_t* criar_inscricao(int, int, estado_programa_t*);
-estado_programa_t* criar_estado_programa(participante_t[], atividade_t[], inscricao_t[], int*, int*, int*, bool_t*);
+estado_programa_t* criar_estado_programa(participante_t**, atividade_t**, inscricao_t**, int*, int*, int*, bool_t*);
 
 void libertar_participante(participante_t*);
 void libertar_atividade(atividade_t*);
@@ -185,6 +195,23 @@ void listar_participantes(estado_programa_t*);
 void listar_atividades(estado_programa_t*);
 void listar_inscricoes(estado_programa_t*);
 
+/* ========================================================== */
+
+int procurar_atividade_por_id(int, estado_programa_t*);
+int procurar_participante_por_id(int, estado_programa_t*);
+int procurar_inscricao_por_id(int, estado_programa_t*);
+
+/* ========================================================== */
+
+char* obter_data_atual();
+char* obter_hora_atual();
+char* obter_hora_atual_com_segundos();
+int timestamp();
+
+/* ========================================================== */
+
+opcao_menu_principal_t menu_principal();
+
 
 
 /* ========================================================== */
@@ -198,9 +225,9 @@ int main() {
     int numero_de_inscricoes = 0;
     char confirmacao_saida;
 
-    participante_t participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
-    atividade_t    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
-    inscricao_t    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
+    participante_t* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
+    atividade_t*    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
+    inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
     bool_t         dados_guardados = FALSE;
 
     /// ESTADO DO PROGRAMA  ///
@@ -271,51 +298,38 @@ void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     }
 }
 
-/**
- * @brief Guarda as inscrições do vetor no ficheiro
- * @param estado_programa
- * @param ficheiro
- * @return void
- */
-void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
-    // Guardar o número de inscrições inseridas
-    fwrite(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
+/* ========================================================== */
 
-    // Guardar as inscrições
+void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
+    fwrite(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
     for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
         fwrite(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
 void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
-    // Carregar o número de participantes inseridos
     fread(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
-
-    // Carregar os participantes
     for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
         fread(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
     }
 }
 
 void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
-    // Carregar o número de atividades inseridas
     fread(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
-
-    // Carregar as atividades
     for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
         fread(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
 void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
-    // Carregar o número de inscrições inseridas
     fread(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
-
-    // Carregar as inscrições
     for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
         fread(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
     }
 }
+
+/* ========================================================== */
+
 
 /**
  * @brief Guarda o estado do programa num ficheiro
@@ -392,7 +406,7 @@ codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
     participante_t* participante = ler_participante(estado_programa);
 
     if (participante != NULL) {
-        estado_programa->participantes[*estado_programa->numero_de_participantes] = *participante;
+        estado_programa->participantes[*estado_programa->numero_de_participantes] = participante;
         (*estado_programa->numero_de_participantes)++;
         resultado = OK;
     }
@@ -410,7 +424,7 @@ codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
     atividade_t* atividade = ler_atividade(estado_programa);
 
     if (atividade != NULL) {
-        estado_programa->atividades[*estado_programa->numero_de_atividades] = *atividade;
+        estado_programa->atividades[*estado_programa->numero_de_atividades] = atividade;
         (*estado_programa->numero_de_atividades)++;
         resultado = OK;
     }
@@ -428,7 +442,7 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
     inscricao_t* inscricao = ler_inscricao(estado_programa);
 
     if (inscricao != NULL) {
-        estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = *inscricao;
+        estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
         (*estado_programa->numero_de_inscricoes)++;
         resultado = OK;
     }
@@ -439,122 +453,100 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
 
 /* ========================================================== app.c*/
 
-t_participante* criar_participante(int identificador, char* nome, char* escola, int nif, char* email, int telefone) {
-    t_participante* participante = (t_participante*) malloc(sizeof(t_participante));
-    participante->identificador = identificador;
-    participante->nome = nome;
-    participante->escola = escola;
+participante_t* criar_participante(char* nome, char* escola, int nif, char* email, int telefone, estado_programa_t* estado_programa) {
+    participante_t* participante = (participante_t*) malloc(sizeof(participante_t));
+    participante->identificador = *estado_programa->numero_de_participantes;
+    strcpy(participante->nome, nome);
+    strcpy(participante->escola, escola);
     participante->nif = nif;
-    participante->email = email;
+    strcpy(participante->email, email);
     participante->telefone = telefone;
     return participante;
 }
 
-t_atividade* criar_atividade(int identificador, char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor) {
-    t_atividade* atividade = (t_atividade*) malloc(sizeof(t_atividade));
-    atividade->identificador = identificador;
-    atividade->designacao = designacao;
-    atividade->data = data;
-    atividade->hora = hora;
-    atividade->local = local;
-    atividade->tipo = tipo;
-    atividade->associacao_estudantes = associacao_estudantes;
+atividade_t* criar_atividade(char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor, estado_programa_t* estado_programa) {
+    atividade_t* atividade = (atividade_t*) malloc(sizeof(atividade_t));
+    atividade->identificador = *estado_programa->numero_de_atividades;
+    strcpy(atividade->designacao, designacao);
+    strcpy(atividade->data, data);
+    strcpy(atividade->hora, hora);
+    strcpy(atividade->local, local);
+    strcpy(atividade->tipo, tipo);
+    strcpy(atividade->associacao_estudantes, associacao_estudantes);
     atividade->valor = valor;
     return atividade;
 }
 
-t_inscricao* criar_inscricao(int identificador, int id_participante, int id_atividade, t_atividade** atividades) {
+inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_programa_t* estado_programa) {
     int indice_procura;
-    int numero_atividades = tamanho_vetor((void**) atividades);
+    int numero_atividades = *estado_programa->numero_de_atividades;
 
-    t_inscricao* inscricao = (t_inscricao*) malloc(sizeof(t_inscricao));
-    inscricao->identificador = identificador;
+    inscricao_t* inscricao = (inscricao_t*) malloc(sizeof(inscricao_t));
+    inscricao->identificador = *estado_programa->numero_de_inscricoes;
     inscricao->id_participante = id_participante;
     inscricao->id_atividade = id_atividade;
 
     // Procurar o valor associado à atividade com o ID passado
-    indice_procura = procurar_atividade_por_id(atividades, numero_atividades, id_atividade);
-    if (indice_procura == -1) {
-        return NULL;
+    indice_procura = procurar_atividade_por_id(id_atividade, estado_programa);
+    if (indice_procura != ERRO) {
+        inscricao->valor_pago = estado_programa->atividades[indice_procura]->valor;
+        strcpy(inscricao->data, obter_data_atual());
+        strcpy(inscricao->hora, obter_hora_atual_com_segundos());
     }
 
-    inscricao->valor_pago = atividades[indice_procura]->valor;
-    inscricao->data = obter_data_atual();
-    inscricao->hora = obter_hora_atual_completa();
     return inscricao;
 }
 
 
-t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t_atividade** vetor_atividades,
-                                         t_inscricao** vetor_inscricoes, int* contador_participantes,
-                                         int* contador_atividades, int* contador_inscricoes, const char* cor_texto, const char* cor_fundo)
+estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, atividade_t** vetor_atividades,
+                                         inscricao_t** vetor_inscricoes, int* contador_participantes,
+                                         int* contador_atividades, int* contador_inscricoes, bool_t* programa_salvo)
 {
-    t_estado_programa* estado_programa = (t_estado_programa*) malloc(sizeof(t_estado_programa));
+    estado_programa_t* estado_programa = (estado_programa_t*) malloc(sizeof(estado_programa_t));
     estado_programa->participantes = vetor_participantes;
     estado_programa->atividades = vetor_atividades;
     estado_programa->inscricoes = vetor_inscricoes;
-    estado_programa->numero_participantes_inseridos = contador_participantes;
-    estado_programa->numero_atividadades_inseridas = contador_atividades;
+    estado_programa->numero_de_atividades = contador_participantes;
+    estado_programa->numero_de_atividades = contador_atividades;
     estado_programa->numero_de_inscricoes = contador_inscricoes;
-    estado_programa->ultimo_save = 0;
-    strcpy(estado_programa->cor_texto, cor_texto);
-    strcpy(estado_programa->cor_fundo, cor_fundo);
+    estado_programa->dados_guardados = programa_salvo;
     return estado_programa;
 }
 
-void libertar_estado_programa(t_estado_programa* estado_programa) {
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) libertar_participante(estado_programa->participantes[i]);
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) libertar_atividade(estado_programa->atividades[i]);
+void libertar_estado_programa(estado_programa_t* estado_programa) {
+    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) libertar_participante(estado_programa->participantes[i]);
+    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) libertar_atividade(estado_programa->atividades[i]);
     for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
     free(estado_programa);
 }
 
 
-/**
- * @brief Liberta a memória alocada para um participante
- *
- * @param participante
- */
-inline_ void libertar_participante(t_participante* participante) {
-    free(participante);
-}
+inline_ void libertar_participante(participante_t* participante) {free(participante);}
+inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
+inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
-/**
- * @brief Liberta a memória alocada para uma atividade
- * @param atividade
- */
-inline_ void libertar_atividade(t_atividade* atividade) {
-    free(atividade);
-}
 
-/**
- * @brief Liberta a memória alocada para uma inscrição
- * @param inscricao
- */
-inline_ void libertar_inscricao(t_inscricao* inscricao) {
-    free(inscricao);
-}
-
-void mostrar_estado_programa(t_estado_programa* estado_programa) {
+void mostrar_estado_programa(estado_programa_t* estado_programa) {
     printf("Participantes:\n");
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
-        mostrar_participante(estado_programa->participantes[i]);
+    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
+        mostrar_participante(&estado_programa->participantes[i]);
     }
     printf("Atividades:\n");
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) {
-        mostrar_atividade(estado_programa->atividades[i]);
+    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
+        mostrar_atividade(&estado_programa->atividades[i]);
     }
     printf("Inscrições:\n");
     for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        mostrar_inscricao(estado_programa->inscricoes[i]);
+        mostrar_inscricao(&estado_programa->inscricoes[i]);
     }
+}
 
-    /**
+/**
  * @brief Mostra um participante
  *
  * @param participante
  */
-inline_ void mostrar_participante(t_participante* participante) {
+inline_ void mostrar_participante(participante_t* participante) {
     printf("    Identificador: %d\n", participante->identificador);
     printf("    Nome: %s\n", participante->nome);
     printf("    Escola: %s\n", participante->escola);
@@ -568,7 +560,7 @@ inline_ void mostrar_participante(t_participante* participante) {
  * @brief Mostra uma atividade
  * @param atividade
  */
-inline_ void mostrar_atividade(t_atividade* atividade) {
+inline_ void mostrar_atividade(atividade_t* atividade) {
     printf("    Identificador: %d\n", atividade->identificador);
     printf("    Designação: %s\n", atividade->designacao);
     printf("    Data: %s\n", atividade->data);
@@ -583,7 +575,7 @@ inline_ void mostrar_atividade(t_atividade* atividade) {
  * @brief Mostra uma inscrição
  * @param inscricao
  */
-inline_ void mostrar_inscricao(t_inscricao* inscricao) {
+inline_ void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
     printf("    ID da Atividade: %d\n", inscricao->id_atividade);
