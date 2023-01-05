@@ -435,3 +435,159 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
 
     return resultado;
 }
+
+
+/* ========================================================== app.c*/
+
+t_participante* criar_participante(int identificador, char* nome, char* escola, int nif, char* email, int telefone) {
+    t_participante* participante = (t_participante*) malloc(sizeof(t_participante));
+    participante->identificador = identificador;
+    participante->nome = nome;
+    participante->escola = escola;
+    participante->nif = nif;
+    participante->email = email;
+    participante->telefone = telefone;
+    return participante;
+}
+
+t_atividade* criar_atividade(int identificador, char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor) {
+    t_atividade* atividade = (t_atividade*) malloc(sizeof(t_atividade));
+    atividade->identificador = identificador;
+    atividade->designacao = designacao;
+    atividade->data = data;
+    atividade->hora = hora;
+    atividade->local = local;
+    atividade->tipo = tipo;
+    atividade->associacao_estudantes = associacao_estudantes;
+    atividade->valor = valor;
+    return atividade;
+}
+
+t_inscricao* criar_inscricao(int identificador, int id_participante, int id_atividade, t_atividade** atividades) {
+    int indice_procura;
+    int numero_atividades = tamanho_vetor((void**) atividades);
+
+    t_inscricao* inscricao = (t_inscricao*) malloc(sizeof(t_inscricao));
+    inscricao->identificador = identificador;
+    inscricao->id_participante = id_participante;
+    inscricao->id_atividade = id_atividade;
+
+    // Procurar o valor associado à atividade com o ID passado
+    indice_procura = procurar_atividade_por_id(atividades, numero_atividades, id_atividade);
+    if (indice_procura == -1) {
+        return NULL;
+    }
+
+    inscricao->valor_pago = atividades[indice_procura]->valor;
+    inscricao->data = obter_data_atual();
+    inscricao->hora = obter_hora_atual_completa();
+    return inscricao;
+}
+
+
+t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t_atividade** vetor_atividades,
+                                         t_inscricao** vetor_inscricoes, int* contador_participantes,
+                                         int* contador_atividades, int* contador_inscricoes, const char* cor_texto, const char* cor_fundo)
+{
+    t_estado_programa* estado_programa = (t_estado_programa*) malloc(sizeof(t_estado_programa));
+    estado_programa->participantes = vetor_participantes;
+    estado_programa->atividades = vetor_atividades;
+    estado_programa->inscricoes = vetor_inscricoes;
+    estado_programa->numero_participantes_inseridos = contador_participantes;
+    estado_programa->numero_atividadades_inseridas = contador_atividades;
+    estado_programa->numero_de_inscricoes = contador_inscricoes;
+    estado_programa->ultimo_save = 0;
+    strcpy(estado_programa->cor_texto, cor_texto);
+    strcpy(estado_programa->cor_fundo, cor_fundo);
+    return estado_programa;
+}
+
+void libertar_estado_programa(t_estado_programa* estado_programa) {
+    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) libertar_participante(estado_programa->participantes[i]);
+    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) libertar_atividade(estado_programa->atividades[i]);
+    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
+    free(estado_programa);
+}
+
+
+/**
+ * @brief Liberta a memória alocada para um participante
+ *
+ * @param participante
+ */
+inline_ void libertar_participante(t_participante* participante) {
+    free(participante);
+}
+
+/**
+ * @brief Liberta a memória alocada para uma atividade
+ * @param atividade
+ */
+inline_ void libertar_atividade(t_atividade* atividade) {
+    free(atividade);
+}
+
+/**
+ * @brief Liberta a memória alocada para uma inscrição
+ * @param inscricao
+ */
+inline_ void libertar_inscricao(t_inscricao* inscricao) {
+    free(inscricao);
+}
+
+void mostrar_estado_programa(t_estado_programa* estado_programa) {
+    printf("Participantes:\n");
+    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
+        mostrar_participante(estado_programa->participantes[i]);
+    }
+    printf("Atividades:\n");
+    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) {
+        mostrar_atividade(estado_programa->atividades[i]);
+    }
+    printf("Inscrições:\n");
+    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
+        mostrar_inscricao(estado_programa->inscricoes[i]);
+    }
+
+    /**
+ * @brief Mostra um participante
+ *
+ * @param participante
+ */
+inline_ void mostrar_participante(t_participante* participante) {
+    printf("    Identificador: %d\n", participante->identificador);
+    printf("    Nome: %s\n", participante->nome);
+    printf("    Escola: %s\n", participante->escola);
+    printf("    NIF: %d\n", participante->nif);
+    printf("    E-mail: %s\n", participante->email);
+    printf("    Telefone: %d\n\n", participante->telefone);
+}
+
+
+/**
+ * @brief Mostra uma atividade
+ * @param atividade
+ */
+inline_ void mostrar_atividade(t_atividade* atividade) {
+    printf("    Identificador: %d\n", atividade->identificador);
+    printf("    Designação: %s\n", atividade->designacao);
+    printf("    Data: %s\n", atividade->data);
+    printf("    Hora: %s\n", atividade->hora);
+    printf("    Local: %s\n", atividade->local);
+    printf("    Tipo: %s\n", atividade->tipo);
+    printf("    Associação de Estudantes: %s\n", atividade->associacao_estudantes);
+    printf("    Valor: %.2f\n", atividade->valor);
+}
+
+/**
+ * @brief Mostra uma inscrição
+ * @param inscricao
+ */
+inline_ void mostrar_inscricao(t_inscricao* inscricao) {
+    printf("    Identificador: %d\n", inscricao->identificador);
+    printf("    ID do Participante: %d\n", inscricao->id_participante);
+    printf("    ID da Atividade: %d\n", inscricao->id_atividade);
+    printf("    Valor Pago: %.2f\n", inscricao->valor_pago);
+    printf("    Data: %s\n", inscricao->data);
+    printf("    Hora: %s\n", inscricao->hora);
+}
