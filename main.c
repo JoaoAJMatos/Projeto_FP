@@ -97,21 +97,18 @@ typedef enum {                          // Menu principal
 
 typedef enum {                          // Menu de participantes
     INSERIR_PARTICIPANTE = 1,
-    REMOVER_PARTICIPANTE,
     LISTAR_PARTICIPANTES,
     VOLTAR_MENU_PRINCIPAL_PARTICIPANTES
 } opcao_menu_participantes_t;
 
 typedef enum {                          // Menu de atividades
     INSERIR_ATIVIDADE = 1,
-    REMOVER_ATIVIDADE,
     LISTAR_ATIVIDADES,
     VOLTAR_MENU_PRINCIPAL_ATIVIDADES
 } opcao_menu_atividades_t;
 
 typedef enum {                          // Menu de inscrições
-    INSCREVER_PARTICIPANTE = 1,
-    REMOVER_INSCRICAO,
+    INSERIR_INSCRICAO = 1,
     LISTAR_INSCRICOES,
     VOLTAR_MENU_PRINCIPAL_INSCRICOES
 } opcao_menu_inscricoes_t;
@@ -255,9 +252,9 @@ void listar_inscricoes(estado_programa_t*);
 
 /* ========================================================== */
 
-int procurar_atividade_por_id(int, estado_programa_t*) {};
-int procurar_participante_por_id(int, estado_programa_t*) {};
-int procurar_inscricao_por_id(int, estado_programa_t*) {};
+int procurar_atividade_por_id(int, estado_programa_t*);
+int procurar_participante_por_id(int, estado_programa_t*);
+int procurar_inscricao_por_id(int, estado_programa_t*);
 
 /* ========================================================== */
 
@@ -277,17 +274,25 @@ bool_t hora_valida(char*);
 
 /* ========================================================== */
 
-opcao_menu_principal_t menu_principal() {};
+opcao_menu_principal_t menu_principal();
+
+opcao_menu_participantes_t ler_opcao_menu_participantes();
 void menu_participantes(estado_programa_t*);
-void menu_atividades(estado_programa_t*) {};
-void menu_inscricoes(estado_programa_t*) {};
-void menu_estatisticas(estado_programa_t*) {};
+
+opcao_menu_atividades_t ler_opcao_menu_atividades();
+void menu_atividades(estado_programa_t*);
+
+opcao_menu_inscricoes_t ler_opcao_menu_inscricoes();
+void menu_inscricoes(estado_programa_t*);
+
+opcao_menu_estatisticas_t ler_opcao_menu_estatisticas();
+void menu_estatisticas(estado_programa_t*);
 
 /* ========================================================== */
 
 void string_para_minusculas(char*);
 void string_para_maiusculas(char*);
-
+void esperar_tecla(const char*);
 
 
 /* ========================================================== */
@@ -303,7 +308,7 @@ int main() {
     participante_t* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
     atividade_t*    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
     inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
-    bool_t         dados_guardados = FALSE;
+    bool_t         dados_guardados = TRUE;                 
     bool_t         sair = FALSE;
     opcao_menu_principal_t opcao_menu;
 
@@ -320,7 +325,6 @@ int main() {
 
     /// LOOP PRINCIPAL ///
     do {
-        limpar_ecra();
         opcao_menu = menu_principal();
 
         switch (opcao_menu) {
@@ -337,21 +341,25 @@ int main() {
                 menu_estatisticas(estado_programa);
                 break;
             case SALVAR:
-                if (estado_programa->dados_guardados == FALSE) {
+                if (dados_guardados == FALSE) {
                     if (guardar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
                         printf("Erro ao guardar dados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
                     } else {
                         printf("Dados guardados com sucesso no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                        dados_guardados = TRUE;
                     }
                 } else {    // Se os dados já tiverem sido guardados
                     printf("Os dados já se encontram guardados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
                 }
+
+                esperar_tecla("Pressione qualquer tecla para continuar...");
                 break;
             case SAIR:
                 sair = confirmar_saida(estado_programa);
         } // Sem caso default para que o compilador nos avise de casos não tratados
     } while(!sair);
 
+    limpar_ecra();
     return OK;
 }
 
@@ -574,6 +582,7 @@ void ler_string(const char* mensagem, char* string, int tamanho) {
     string[strcspn(string, "\n")] = '\0';
 }
 
+
 /**
  * @brief Lê um inteiro compreendido entre os valores especificados
  * @param mensagem
@@ -692,12 +701,19 @@ participante_t* ler_participante(estado_programa_t* estado_programa) {
  */
 codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
-    participante_t* participante = ler_participante(estado_programa);
+    participante_t* participante;
 
-    if (participante != NULL) {
-        estado_programa->participantes[*estado_programa->numero_de_participantes] = participante;
-        (*estado_programa->numero_de_participantes)++;
-        resultado = OK;
+    if (*estado_programa->numero_de_participantes == NUMERO_MAXIMO_DE_PARTICIPANTES) {
+        printf("Número máximo de participantes atingido.\n");
+        esperar_tecla("Pressione qualquer tecla para continuar...");
+    }
+    else {
+        participante = ler_participante(estado_programa);
+        if (participante != NULL) {
+            estado_programa->participantes[*estado_programa->numero_de_participantes] = participante;
+            (*estado_programa->numero_de_participantes)++;
+            resultado = OK;
+        }
     }
 
     return resultado;
@@ -710,12 +726,19 @@ codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
  */
 codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
-    atividade_t* atividade = ler_atividade(estado_programa);
+    atividade_t* atividade;
 
-    if (atividade != NULL) {
-        estado_programa->atividades[*estado_programa->numero_de_atividades] = atividade;
-        (*estado_programa->numero_de_atividades)++;
-        resultado = OK;
+    if (*estado_programa->numero_de_atividades == NUMERO_MAXIMO_DE_ATIVIDAES) {
+        printf("Número máximo de atividades atingido.\n");
+        esperar_tecla("Pressione qualquer tecla para continuar...");
+    }
+    else {
+        atividade = ler_atividade(estado_programa);
+        if (atividade != NULL) {
+            estado_programa->atividades[*estado_programa->numero_de_atividades] = atividade;
+            (*estado_programa->numero_de_atividades)++;
+            resultado = OK;
+        }
     }
 
     return resultado;
@@ -728,12 +751,19 @@ codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
  */
 codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
-    inscricao_t* inscricao = ler_inscricao(estado_programa);
+    inscricao_t* inscricao;
 
-    if (inscricao != NULL) {
-        estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
-        (*estado_programa->numero_de_inscricoes)++;
-        resultado = OK;
+    if (*estado_programa->numero_de_inscricoes == NUMERO_MAXIMO_DE_INSCRICOES) {
+        printf("Número máximo de inscrições atingido.\n");
+        esperar_tecla("Pressione qualquer tecla para continuar...");
+    }
+    else {
+        inscricao = ler_inscricao(estado_programa);
+        if (inscricao != NULL) {
+            estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
+            (*estado_programa->numero_de_inscricoes)++;
+            resultado = OK;
+        }
     }
 
     return resultado;
@@ -873,18 +903,21 @@ inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
 inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
+    
     printf("Participantes:\n");
-    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
-        mostrar_participante(estado_programa->participantes[indice]);
-    }
+    mostrar_participantes(estado_programa);
+
     printf("Atividades:\n");
-    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
-        mostrar_atividade(estado_programa->atividades[indice]);
-    }
+    mostrar_atividades(estado_programa);
+
     printf("Inscrições:\n");
-    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
-        mostrar_inscricao(estado_programa->inscricoes[indice]);
-    }
+    mostrar_inscricoes(estado_programa);
+
+    printf("Dados guardados: %s\n", *estado_programa->dados_guardados ? "Sim" : "Não");
+
+    printf("Número de participantes: %d (%d restantes)\n", *estado_programa->numero_de_participantes, NUMERO_MAXIMO_DE_PARTICIPANTES - *estado_programa->numero_de_participantes);
+    printf("Número de atividades: %d (%d restantes)\n", *estado_programa->numero_de_atividades, NUMERO_MAXIMO_DE_ATIVIDAES - *estado_programa->numero_de_atividades);
+    printf("Número de inscrições: %d (%d restantes)\n", *estado_programa->numero_de_inscricoes, NUMERO_MAXIMO_DE_INSCRICOES - *estado_programa->numero_de_inscricoes);
 }
 
 inline_ static void mostrar_participante(participante_t* participante) {
@@ -916,6 +949,27 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Hora: %s\n", inscricao->hora);
 }
 
+inline_ static void mostrar_participantes(estado_programa_t* estado_programa) {
+    int indice;
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        mostrar_participante(estado_programa->participantes[indice]);
+    }
+}
+
+inline_ static void mostrar_atividades(estado_programa_t* estado_programa) {
+    int indice;
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        mostrar_atividade(estado_programa->atividades[indice]);
+    }
+}
+
+inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa) {
+    int indice;
+    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        mostrar_inscricao(estado_programa->inscricoes[indice]);
+    }
+}
+
 
 /* ========================================================== */
 /* =               CONFIRMAÇÕES ESPECÍFICAS                 = */
@@ -931,8 +985,8 @@ bool_t confirmar_saida(estado_programa_t* estado_programa) {
     char mensagem[100];
 
     // Definir a mensagem consoante o estado do programa
-    estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ")
-                                     : strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ");
+    estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ")
+                                     : strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ");
 
     do {
         confirmacao = ler_char(mensagem);
@@ -941,7 +995,7 @@ bool_t confirmar_saida(estado_programa_t* estado_programa) {
             printf("Valor inválido. Introduza 's' para sim ou 'n' para não.\n");
     } while (confirmacao != 's' && confirmacao != 'n');
 
-    return confirmacao;
+    return confirmacao == 's';
 }
 
 /**
@@ -1140,11 +1194,279 @@ void string_para_maiusculas(char* string) {
         string[indice] = toupper(string[indice]);
 }
 
+void esperar_tecla(const char* mensagem) {
+    if (mensagem != NULL) printf("%s", mensagem);
+    fflush(stdin);
+    getchar();
+}
+
+
+
+/* ========================================================== */
+/* =                UTILITARIOS DE PESQUISA                 = */
+/* ========================================================== */
+
+// NOTA:
+//
+// A utilizacao de early returns iria facilitar a implementacao, porem nao sao permitidos
+// de acordo com as recomendações do docente
+
+int procurar_participante_por_id(int id, estado_programa_t* estado_programa) {
+    int indice;
+    bool_t encontrado = FALSE;      
+    
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        if (estado_programa->participantes[indice]->identificador == id) encontrado = TRUE;
+    }
+    
+    return encontrado ? indice : ERRO;
+}
+
+int procurar_atividade_por_id(int id, estado_programa_t* estado_programa) {
+    int indice;
+    bool_t encontrado = FALSE;
+    
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        if (estado_programa->atividades[indice]->identificador == id) encontrado = TRUE;
+    }
+
+    return encontrado ? indice : ERRO;
+}
+
+int procurar_inscricao_por_id(int id, estado_programa_t* estado_programa) {
+    int indice;
+    bool_t encontrado = FALSE;
+
+    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        if (estado_programa->inscricoes[indice]->identificador == id) encontrado = TRUE;
+    }
+
+    return encontrado ? indice : ERRO;
+}
+
+
 
 /* ========================================================== */
 /* =                         MENUS                          = */
 /* ========================================================== */
 
-void menu_participantes(estado_programa_t* estado_programa) {
+/**
+ * @brief Funcao que le a opcao do menu principal
+ * 
+ * A funcao main chama esta funcao para ler a opcao do menu principal.
+ * 
+ * @return opcao_menu_principal_t 
+ */
+opcao_menu_principal_t menu_principal() {
+    int opcao;
 
+    do {
+        limpar_ecra();
+
+        printf("Menu Principal\n");
+        printf("1. Participantes\n");
+        printf("2. Atividades\n");
+        printf("3. Inscricoes\n");
+        printf("4. Estatisticas\n");
+        printf("5. Salvar\n");
+        printf("6. Sair\n");
+        printf("Opcao: ");
+        scanf("%d", &opcao);
+
+        if (opcao < 1 || opcao > 6) {
+            printf("Opcao '%d' invalida. Tente novamente.\n", opcao);
+            esperar_tecla(NULL);
+        } 
+    } while (opcao < 1 || opcao > 6);
+
+    return (opcao_menu_principal_t) opcao;
+}
+
+// TODO: Criar uma funcao mais generica para ler opcoes de menus
+opcao_menu_participantes_t ler_opcao_menu_participantes() {
+    int opcao;
+
+    do {
+        limpar_ecra();
+
+        printf("Menu Participantes\n");
+        printf("1. Inserir Participante\n");
+        printf("2. Listar Participantes\n");
+        printf("3. Voltar\n");
+        printf("Opcao: ");
+        scanf("%d", &opcao);
+
+        if (opcao < 1 || opcao > 3) {
+            printf("Opcao '%d' invalida. Tente novamente.\n", opcao);
+            esperar_tecla(NULL);
+        } 
+    } while (opcao < 1 || opcao > 3);
+
+    return (opcao_menu_participantes_t) opcao;
+}
+
+opcao_menu_atividades_t ler_opcao_menu_atividades() {
+    int opcao;
+
+    do {
+        limpar_ecra();
+
+        printf("Menu Atividades\n");
+        printf("1. Inserir Atividade\n");
+        printf("2. Listar Atividades\n");
+        printf("3. Voltar\n");
+        printf("Opcao: ");
+        scanf("%d", &opcao);
+
+        if (opcao < 1 || opcao > 3) {
+            printf("Opcao '%d' invalida. Tente novamente.\n", opcao);
+            esperar_tecla(NULL);
+        } 
+    } while (opcao < 1 || opcao > 3);
+
+    return (opcao_menu_atividades_t) opcao;
+}
+
+opcao_menu_inscricoes_t ler_opcao_menu_inscricoes() {
+    int opcao;
+
+    do {
+        limpar_ecra();
+
+        printf("Menu Inscricoes\n");
+        printf("1. Inserir Inscricao\n");
+        printf("2. Listar Inscricoes\n");
+        printf("3. Voltar\n");
+        printf("Opcao: ");
+        scanf("%d", &opcao);
+
+        if (opcao < 1 || opcao > 3) {
+            printf("Opcao '%d' invalida. Tente novamente.\n", opcao);
+            esperar_tecla(NULL);
+        } 
+    } while (opcao < 1 || opcao > 3);
+
+    return (opcao_menu_inscricoes_t) opcao;
+}
+
+opcao_menu_estatisticas_t ler_opcao_menu_estatisticas() {
+    int opcao;
+
+    do {
+        limpar_ecra();
+
+        printf("Menu Estatisticas\n");
+        printf("1. Numero de atividades por associacao\n");
+        printf("2. Percentagem de inscricoes por escola\n");
+        printf("3. Valor total angariado em horizonte temporal\n");
+        printf("4. Voltar\n");
+        printf("Opcao: ");
+        scanf("%d", &opcao);
+
+        if (opcao < 1 || opcao > 4) {
+            printf("Opcao '%d' invalida. Tente novamente.\n", opcao);
+            esperar_tecla(NULL);
+        } 
+    } while (opcao < 1 || opcao > 4);
+
+    return (opcao_menu_estatisticas_t) opcao;
+}
+
+
+/* ========================================================== */
+
+
+/**
+ * @brief Funcao que orquestra a chamada de funcoes para o menu de participantes
+ * 
+ * @param estado_programa 
+ */
+void menu_participantes(estado_programa_t* estado_programa) {
+    opcao_menu_participantes_t opcao;
+    
+    do
+    {
+        opcao = ler_opcao_menu_participantes();
+        switch (opcao)
+        {
+        case INSERIR_PARTICIPANTE:
+            inserir_participante(estado_programa);
+            break;
+        case LISTAR_PARTICIPANTES:
+            mostrar_participantes(estado_programa);
+            break;
+        case VOLTAR_MENU_PRINCIPAL_PARTICIPANTES:
+            break;
+        }
+    } while (opcao != VOLTAR_MENU_PRINCIPAL_PARTICIPANTES);
+}
+
+/**
+ * @brief Funcao que orquestra a chamada de funcoes para o menu de atividades
+ * 
+ * @param estado_programa 
+ */
+void menu_atividades(estado_programa_t* estado_programa) {
+    opcao_menu_atividades_t opcao;
+    
+    do
+    {
+        opcao = ler_opcao_menu_atividades();
+        switch (opcao)
+        {
+        case INSERIR_ATIVIDADE:
+            inserir_atividade(estado_programa);
+            break;
+        case LISTAR_ATIVIDADES:
+            mostrar_atividades(estado_programa);
+            break;
+        case VOLTAR_MENU_PRINCIPAL_ATIVIDADES:
+            break;
+        }
+    } while (opcao != VOLTAR_MENU_PRINCIPAL_ATIVIDADES);
+}
+
+/**
+ * @brief Funcao que orquestra a chamada de funcoes para o menu de inscricoes
+ * 
+ * @param estado_programa 
+ */
+void menu_inscricoes(estado_programa_t* estado_programa) {
+    opcao_menu_inscricoes_t opcao;
+    
+    do
+    {
+        opcao = ler_opcao_menu_inscricoes();
+        switch (opcao)
+        {
+        case INSERIR_INSCRICAO:
+            inserir_inscricao(estado_programa);
+            break;
+        case LISTAR_INSCRICOES:
+            mostrar_inscricoes(estado_programa);
+            break;
+        case VOLTAR_MENU_PRINCIPAL_INSCRICOES:
+            break;
+        }
+    } while (opcao != VOLTAR_MENU_PRINCIPAL_INSCRICOES);
+}
+
+void menu_estatisticas(estado_programa_t* estado_programa) {
+    opcao_menu_estatisticas_t opcao;
+
+    do
+    {
+        opcao = ler_opcao_menu_estatisticas();
+        switch (opcao)
+        {
+        case NUMERO_DE_ATIVIDADES_POR_ASSOCIACAO:
+            break;
+        case PERCENTAGEM_DE_INSCRICOES_POR_ESCOLA:
+            break;
+        case VALOR_TOTAL_DAS_INSCRICOES_EM_HORIZONTE_TEMPORAL:
+            break;
+        case VOLTAR_MENU_PRINCIPAL_ESTATISTICAS:
+            break;
+        }
+    } while (opcao != VOLTAR_MENU_PRINCIPAL_ESTATISTICAS);
 }
