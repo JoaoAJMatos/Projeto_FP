@@ -229,6 +229,7 @@ char  ler_char(const char*);
 void  ler_escola(const char*, char*, int);
 void  ler_data(const char*, char*);
 void  ler_hora(const char*, char*);
+
 void  ler_email(const char*, char*);
 int   ler_nif(const char*);
 int   ler_telefone(const char*);
@@ -891,7 +892,7 @@ estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, a
     estado_programa->participantes = vetor_participantes;
     estado_programa->atividades = vetor_atividades;
     estado_programa->inscricoes = vetor_inscricoes;
-    estado_programa->numero_de_atividades = contador_participantes;
+    estado_programa->numero_de_participantes = contador_participantes;
     estado_programa->numero_de_atividades = contador_atividades;
     estado_programa->numero_de_inscricoes = contador_inscricoes;
     estado_programa->dados_guardados = programa_salvo;
