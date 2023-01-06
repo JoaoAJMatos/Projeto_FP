@@ -285,8 +285,8 @@ void menu_estatisticas(estado_programa_t*) {};
 
 /* ========================================================== */
 
-inline_ void string_para_minusculas(char*);
-inline_ void string_para_maiusculas(char*);
+void string_para_minusculas(char*);
+void string_para_maiusculas(char*);
 
 
 
@@ -1128,13 +1128,13 @@ char* obter_hora_atual_com_segundos() {
 
 /* ========================================================== */
 
-inline_ void string_para_minusculas(char* string) {
+void string_para_minusculas(char* string) {
     int indice;
     for (indice = 0; indice < strlen(string); indice++)
         string[indice] = tolower(string[indice]);
 }
 
-inline_ void string_para_maiusculas(char* string) {
+void string_para_maiusculas(char* string) {
     int indice;
     for (indice = 0; indice < strlen(string); indice++)
         string[indice] = toupper(string[indice]);
