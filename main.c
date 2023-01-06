@@ -9,8 +9,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
+#include <string.h>
 #include <time.h>
 
 // A keyword "inline" parecia causar problemas com o GCC na minha
@@ -32,7 +32,7 @@
 /// MACROS ///
 #define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
 #define limpar_ecra() printf(ESCAPE_CODE_LIMPAR_CONSOLA)     // Definir uma macro para limpar o ecrã
-#define obter_timestamp() time(NULL)                         // Defini uma macro para obter umaa timestamp
+#define obter_timestamp() time(NULL)                         // Defini uma macro para obter uma timestamp
 #define TESTE 1                                              // Flag de teste
 
 // Ficheiros //
@@ -45,7 +45,7 @@
 #define NUMERO_MAXIMO_DE_ATIVIDAES  200
 #define NUMERO_MAXIMO_DE_INSCRICOES 10000
 #define TAMANHO_MAXIMO_NOME 50
-#define TAMANHO_MAXIMO_EMAIL TAMANHO_MAXIMO_NOME
+#define TAMANHO_MAXIMO_EMAIL 320         // 64 caracteres para a parte local + 1 para o @ + 255 caracteres para o domínio segundo o RFC 5321
 #define TAMANHO_MAXIMO_ESCOLA 10
 #define TAMANHO_MAXIMO_DESIGNACAO 100
 #define TAMANHO_MAXIMO_LOCAL TAMANHO_MAXIMO_NOME
@@ -54,8 +54,16 @@
 #define TAMANHO_DATA 11
 #define TAMANHO_HORA 6
 
+#define DATA_FORMATO "%02d/%02d/%04d" // (DD/MM/AAAA)
+#define HORA_FORMATO "%02d:%02d"      // (HH:MM)
+#define HORA_FORMATO_COMPLETO "%02d:%02d:%02d" // (HH:MM:SS)
 
-/// TIPOS E ESTRUTURAS ///
+
+/* ========================================================== */
+/* =                 UTILITÁRIOS DE OUTPUT                  = */
+/* ========================================================== */
+
+
 typedef enum {
     FALSE = 0,
     TRUE = 1
@@ -66,9 +74,18 @@ typedef enum {
     ERRO = -1
 } codigo_erro_t;
 
-// ENUMERAÇÕES //
-// Enumerações com as opções de cada menu do programa
+// A enumeração dos tipos primitivos é usada para que algumas funções genéricas no programa possam
+// interpretar os parâmetros de entrada corretamente
+// (ex: função vetor_contem_elemento(void*, int, void*, tipo_primitivo_t))
+// Os templates e o meta-programming do C++ seriam uma alternativa melhor mas como é óbvio, não existem no C
+typedef enum {
+    INT = 0,
+    FLOAT = 1,
+    STRING = 2,
+    CHAR = 3,
+} tipo_primitivo_t;
 
+// Enumerações com as opções de cada menu do programa
 typedef enum {                          // Menu principal
     MENU_PARTICIPANTES = 1,
     MENU_ATIVIDADES,
@@ -210,9 +227,15 @@ int   ler_inteiro_intervalo(const char*, int, int);
 float ler_float_intervalo(const char*, float, float);
 char  ler_char(const char*);
 
+void  ler_escola(const char*, char*, int);
+void  ler_data(const char*, char*);
+void  ler_hora(const char*, char*);
+void  ler_email(const char*, char*);
+int   ler_nif(const char*);
+
 participante_t* ler_participante(estado_programa_t*);
-atividade_t* ler_atividade(estado_programa_t*);
-inscricao_t* ler_inscricao(estado_programa_t*);
+atividade_t* ler_atividade(estado_programa_t*) {};
+inscricao_t* ler_inscricao(estado_programa_t*) {};
 
 codigo_erro_t inserir_participante(estado_programa_t*);
 codigo_erro_t inserir_atividade(estado_programa_t*);
@@ -231,9 +254,9 @@ void listar_inscricoes(estado_programa_t*);
 
 /* ========================================================== */
 
-int procurar_atividade_por_id(int, estado_programa_t*);
-int procurar_participante_por_id(int, estado_programa_t*);
-int procurar_inscricao_por_id(int, estado_programa_t*);
+int procurar_atividade_por_id(int, estado_programa_t*) {};
+int procurar_participante_por_id(int, estado_programa_t*) {};
+int procurar_inscricao_por_id(int, estado_programa_t*) {};
 
 /* ========================================================== */
 
@@ -245,11 +268,24 @@ int timestamp();
 /* ========================================================== */
 
 bool_t confirmar_saida(estado_programa_t*);
-opcao_menu_principal_t menu_principal();
+bool_t vetor_contem_elemento(void*, int, void*, tipo_primitivo_t);
+bool_t nif_valido(int);
+bool_t email_valido(char*);
+bool_t data_valida(char*);
+bool_t hora_valida(char*);
+
+/* ========================================================== */
+
+opcao_menu_principal_t menu_principal() {};
 void menu_participantes(estado_programa_t*);
-void menu_atividades(estado_programa_t*);
-void menu_inscricoes(estado_programa_t*);
-void menu_estatisticas(estado_programa_t*);
+void menu_atividades(estado_programa_t*) {};
+void menu_inscricoes(estado_programa_t*) {};
+void menu_estatisticas(estado_programa_t*) {};
+
+/* ========================================================== */
+
+inline_ void string_para_minusculas(char*);
+inline_ void string_para_maiusculas(char*);
 
 
 
@@ -318,7 +354,17 @@ int main() {
     return OK;
 }
 
+
 /* ========================================================== */
+/* =               GUARDAR & CARREGAR DADOS                 = */
+/* ========================================================== */
+
+void inicializar_vetores(estado_programa_t* estado_programa) {
+    int i;
+    for (i = 0; i < NUMERO_MAXIMO_DE_PARTICIPANTES; i++) estado_programa->participantes[i] = NULL;
+    for (i = 0; i < NUMERO_MAXIMO_DE_ATIVIDAES; i++) estado_programa->atividades[i] = NULL;
+    for (i = 0; i < NUMERO_MAXIMO_DE_INSCRICOES; i++) estado_programa->inscricoes[i] = NULL;
+}
 
 /**
  * @brief Verifica se um ficheiro existe.
@@ -331,9 +377,6 @@ bool_t ficheiro_existe(const char* caminho) {
     if (access(caminho, F_OK) != ERRO) existe = TRUE;
     return existe;
 }
-
-
-/// GUARDAR/CARREGAR DADOS ///
 
 /**
  * @brief Guarda os participantes do vetor no ficheiro
@@ -369,8 +412,12 @@ void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     }
 }
 
-/* ========================================================== */
-
+/**
+ * @brief Guarda as inscrições do vetor no ficheiro
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de inscrições inseridas
     int indice;
@@ -382,6 +429,12 @@ void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     }
 }
 
+/**
+ * @brief Carrega os participantes do ficheiro para o vetor
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de participantes inseridos
     int indice;
@@ -393,6 +446,12 @@ void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) 
     }
 }
 
+/**
+ * @brief Carrega as atividades do ficheiro para o vetor
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de atividades inseridas
     int indice;
@@ -404,6 +463,12 @@ void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     }
 }
 
+/**
+ * @brief Carrega as inscrições do ficheiro para o vetor
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de inscrições inseridas
     int indice;
@@ -415,7 +480,8 @@ void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     }
 }
 
-/* ========================================================== */
+
+/// GUARDAR & CARREGAR ESTADO ///
 
 
 /**
@@ -458,6 +524,15 @@ estado_programa_t* carregar_estado_programa(const char* caminho) {
     return estado_programa;
 }
 
+
+/// GUARDAR & CARREGAR DADOS ///
+
+/**
+ * @brief Guarda os dados do programa num ficheiro
+ * @param caminho
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
 codigo_erro_t guardar_dados(const char* caminho, estado_programa_t* estado_programa) {
     codigo_erro_t codigo_erro = guardar_estado_programa(caminho, estado_programa);
     return codigo_erro;
@@ -481,11 +556,132 @@ codigo_erro_t carregar_dados(const char* caminho, estado_programa_t* estado_prog
     return resultado;
 }
 
-/// INSERÇÃO DE DADOS ///
 
+/* ========================================================== */
+/* =                 UTILITÁRIOS DE INPUT                   = */
+/* ========================================================== */
+
+/**
+ * @brief Lê uma string com o tamanho especificado
+ * @param string
+ * @param tamanho
+ * @return void
+ */
+void ler_string(const char* mensagem, char* string, int tamanho) {
+    printf("%s", mensagem);
+    fgets(string, tamanho, stdin);
+    string[strcspn(string, "\n")] = '\0';
+}
+
+/**
+ * @brief Lê um inteiro compreendido entre os valores especificados
+ * @param mensagem
+ * @return int
+ */
+int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo) {
+    int inteiro;
+
+    do {
+        printf("%s", mensagem);
+        scanf("%d", &inteiro);
+        getchar();
+        if (inteiro < minimo || inteiro > maximo)
+            printf("Valor inválido. Introduza um valor entre %d e %d.\n", minimo, maximo);
+
+    } while (inteiro < minimo || inteiro > maximo);
+
+    return inteiro;
+}
+
+/**
+ * @brief Lê um float compreendido entre os valores especificados
+ * @param mensagem
+ * @return float
+ */
+float ler_float_intervalo(const char* mensagem, float minimo, float maximo) {
+    float flutuante;
+
+    do {
+        printf("%s", mensagem);
+        scanf("%f", &flutuante);
+        getchar();
+        if (flutuante < minimo || flutuante > maximo)
+            printf("Valor inválido. Introduza um valor entre %.2f e %.2f.\n", minimo, maximo);
+
+    } while (flutuante < minimo || flutuante > maximo);
+
+    return flutuante;
+}
+
+char ler_char(const char* mensagem) {
+    char caracter;
+    printf("%s", mensagem);
+    scanf(" %c", &caracter);
+    return caracter;
+}
+
+/**
+ * @brief Lê a escola de um participante até que a escola inserida esteja dentro das opções possíveis
+ * @param mensagem
+ * @param output
+ * @param tamanho_maximo
+ */
+void ler_escola(const char* mensagem, char* output, int tamanho_maximo) {
+    char escola[TAMANHO_MAXIMO_ESCOLA];
+    char* escolas_possiveis[] = {"ESTG", "ESECS", "ESSLEI", "ESAD", "ESTM"};
+    do {
+        ler_string(mensagem, escola, TAMANHO_MAXIMO_ESCOLA);
+        string_para_maiusculas(escola);
+        if (!vetor_contem_elemento(escolas_possiveis, 5, escola, STRING))
+            printf("Escola inválida. Escolas possíveis: ESTG, ESECS, ESSLEI, ESAD, ESTM.\n");
+    } while (!vetor_contem_elemento(escolas_possiveis, 5, escola, STRING));
+}
+
+/**
+ * @brief Lê um NIF até que o NIF inserido seja válido
+ *
+ * @warning O NIF deve ser composto por 9 dígitos e deve seguir o algoritmo de validação do NIF
+ *
+ * @param mensagem
+ * @return int
+ */
+int ler_nif(const char* mensagem) {
+    int nif;
+    do {
+        nif = ler_inteiro_intervalo(mensagem, 100000000, 999999999);
+        if (!nif_valido(nif))
+            printf("NIF inválido. Introduza um NIF válido.\n");
+    } while (!nif_valido(nif));
+    return nif;
+}
+
+void ler_email(const char* mensagem, char* output) {
+    char email[TAMANHO_MAXIMO_EMAIL];
+    do {
+        ler_string(mensagem, email, TAMANHO_MAXIMO_EMAIL);
+        if (!email_valido(email))
+            printf("Email inválido. Introduza um email válido.\n");
+    } while (!email_valido(email));
+    strcpy(output, email);
+}
+
+/**
+ * @brief Lê os dados para a criação de um participante e guarda-os na estrutura
+ * @param estado_programa
+ * @return participante_t*
+ */
 participante_t* ler_participante(estado_programa_t* estado_programa) {
-    int id = *estado_programa->numero_de_participantes;
+    participante_t* participante = NULL;
     char nome[TAMANHO_MAXIMO_NOME];
+    char escola[TAMANHO_MAXIMO_ESCOLA];
+    char email[TAMANHO_MAXIMO_EMAIL];
+    int  nif, telefone;
+
+    ler_string("Nome do participante: ", nome, TAMANHO_MAXIMO_NOME);
+    ler_escola("Escola do participante: ", escola, TAMANHO_MAXIMO_ESCOLA);
+    nif = ler_nif("NIF do participante: ");
+
+    return participante;
 }
 
 /**
@@ -544,7 +740,20 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
 
 
 /* ========================================================== */
+/* =                UTILITÁRIOS DOS STRUCTS                 = */
+/* ========================================================== */
 
+
+/**
+ * @brief Aloca memória para um participante e inicializa os seus campos
+ * @param nome
+ * @param escola
+ * @param nif
+ * @param email
+ * @param telefone
+ * @param estado_programa
+ * @return participante_t*
+ */
 participante_t* criar_participante(char* nome, char* escola, int nif, char* email, int telefone, estado_programa_t* estado_programa) {
     participante_t* participante = (participante_t*) malloc(sizeof(participante_t));
     participante->identificador = *estado_programa->numero_de_participantes;
@@ -556,6 +765,16 @@ participante_t* criar_participante(char* nome, char* escola, int nif, char* emai
     return participante;
 }
 
+/**
+ * @brief Aloca memória para uma atividade e inicializa os seus campos
+ * @param nome
+ * @param descricao
+ * @param data
+ * @param hora_inicio
+ * @param hora_fim
+ * @param estado_programa
+ * @return atividade_t*
+ */
 atividade_t* criar_atividade(char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor, estado_programa_t* estado_programa) {
     atividade_t* atividade = (atividade_t*) malloc(sizeof(atividade_t));
     atividade->identificador = *estado_programa->numero_de_atividades;
@@ -569,19 +788,31 @@ atividade_t* criar_atividade(char* designacao, char* data, char* hora, char* loc
     return atividade;
 }
 
+/**
+ * @brief Aloca memória para uma inscrição e inicializa os seus campos
+ * @param participante
+ * @param atividade
+ * @param estado_programa
+ * @return inscricao_t*
+ */
 inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_programa_t* estado_programa) {
-    int indice_procura;
+    int indice_procura_atividades, indice_procura_participantes;
     int numero_atividades = *estado_programa->numero_de_atividades;
+    inscricao_t* inscricao = NULL;
 
-    inscricao_t* inscricao = (inscricao_t*) malloc(sizeof(inscricao_t));
-    inscricao->identificador = *estado_programa->numero_de_inscricoes;
-    inscricao->id_participante = id_participante;
-    inscricao->id_atividade = id_atividade;
+    // Procurar o participante e a atividade com os IDs especificados
+    indice_procura_atividades = procurar_atividade_por_id(id_atividade, estado_programa);
+    indice_procura_participantes = procurar_participante_por_id(id_participante, estado_programa);
 
-    // Procurar o valor associado à atividade com o ID passado
-    indice_procura = procurar_atividade_por_id(id_atividade, estado_programa);
-    if (indice_procura != ERRO) {
-        inscricao->valor_pago = estado_programa->atividades[indice_procura]->valor;
+    if (indice_procura_atividades != ERRO && indice_procura_participantes != ERRO) {
+        inscricao = (inscricao_t*) malloc(sizeof(inscricao_t));
+
+        // Atribuir os valores aos campos da inscrição
+        inscricao->identificador = *estado_programa->numero_de_inscricoes;
+        inscricao->id_participante = id_participante;
+        inscricao->id_atividade = id_atividade;
+
+        // A inscrição tem a data e hora da sua criação
         strcpy(inscricao->data, obter_data_atual());
         strcpy(inscricao->hora, obter_hora_atual_com_segundos());
     }
@@ -589,7 +820,17 @@ inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_progr
     return inscricao;
 }
 
-
+/**
+ * @brief Aloca memória para o estado do programa e inicializa os seus campos
+ * @param vetor_participantes
+ * @param vetor_atividades
+ * @param vetor_inscricoes
+ * @param contador_participantes
+ * @param contador_atividades
+ * @param contador_inscricoes
+ * @param programa_salvo
+ * @return estado_programa_t*
+ */
 estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, atividade_t** vetor_atividades,
                                          inscricao_t** vetor_inscricoes, int* contador_participantes,
                                          int* contador_atividades, int* contador_inscricoes, bool_t* programa_salvo)
@@ -605,6 +846,12 @@ estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, a
     return estado_programa;
 }
 
+
+/* ========================================================== */
+/* =          UTILITÁRIOS DE DESACOLAÇÃO DE MEMÓRIA         = */
+/* ========================================================== */
+
+
 void libertar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
     for (indice= 0; indice < *estado_programa->numero_de_participantes; indice++) libertar_participante(estado_programa->participantes[indice]);
@@ -617,6 +864,11 @@ void libertar_estado_programa(estado_programa_t* estado_programa) {
 inline_ void libertar_participante(participante_t* participante) {free(participante);}
 inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
 inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
+
+
+/* ========================================================== */
+/* =                 UTILITÁRIOS DE OUTPUT                  = */
+/* ========================================================== */
 
 void mostrar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
@@ -634,11 +886,6 @@ void mostrar_estado_programa(estado_programa_t* estado_programa) {
     }
 }
 
-/**
- * @brief Mostra um participante
- *
- * @param participante
- */
 inline_ void mostrar_participante(participante_t* participante) {
     printf("    Identificador: %d\n", participante->identificador);
     printf("    Nome: %s\n", participante->nome);
@@ -648,11 +895,6 @@ inline_ void mostrar_participante(participante_t* participante) {
     printf("    Telefone: %d\n\n", participante->telefone);
 }
 
-
-/**
- * @brief Mostra uma atividade
- * @param atividade
- */
 inline_ void mostrar_atividade(atividade_t* atividade) {
     printf("    Identificador: %d\n", atividade->identificador);
     printf("    Designação: %s\n", atividade->designacao);
@@ -664,10 +906,6 @@ inline_ void mostrar_atividade(atividade_t* atividade) {
     printf("    Valor: %.2f\n", atividade->valor);
 }
 
-/**
- * @brief Mostra uma inscrição
- * @param inscricao
- */
 inline_ void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
@@ -677,54 +915,21 @@ inline_ void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Hora: %s\n", inscricao->hora);
 }
 
+
+/* ========================================================== */
+/* =               CONFIRMAÇÕES ESPECÍFICAS                 = */
 /* ========================================================== */
 
-void ler_string(const char* mensagem, char* string, int tamanho) {
-    printf("%s", mensagem);
-    fgets(string, tamanho, stdin);
-    string[strcspn(string, "\n")] = '\0';
-}
-
-int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo) {
-    int inteiro;
-
-    do {
-        printf("%s", mensagem);
-        scanf("%d", &inteiro);
-        getchar();
-        if (inteiro < minimo || inteiro > maximo)
-            printf("Valor inválido. Introduza um valor entre %d e %d.\n", minimo, maximo);
-
-    } while (inteiro < minimo || inteiro > maximo);
-
-    return inteiro;
-}
-
-float ler_float_intervalo(const char* mensagem, float minimo, float maximo) {
-    float flutuante;
-
-    do {
-        printf("%s", mensagem);
-        scanf("%f", &flutuante);
-        getchar();
-        if (flutuante < minimo || flutuante > maximo)
-            printf("Valor inválido. Introduza um valor entre %.2f e %.2f.\n", minimo, maximo);
-
-    } while (flutuante < minimo || flutuante > maximo);
-
-    return flutuante;
-}
-
-char ler_char(const char* mensagem) {
-    char caracter;
-    printf("%s", mensagem);
-    scanf(" %c", &caracter);
-    return caracter;
-}
-
+/**
+ * @brief Função que confirma a saída do programa
+ * @param estado_programa
+ * @return
+ */
 bool_t confirmar_saida(estado_programa_t* estado_programa) {
     bool_t confirmacao;
     char mensagem[100];
+
+    // Definir a mensagem consoante o estado do programa
     estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ")
                                      : strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ");
 
@@ -738,22 +943,207 @@ bool_t confirmar_saida(estado_programa_t* estado_programa) {
     return confirmacao;
 }
 
+/**
+ * @brief Função genérica de procura de dados em vetores com tipos primitivos
+ * @param vetor
+ * @param tamanho
+ * @param elemento_procura
+ * @param tipo_de_dados_vetor
+ * @return bool_t
+ */
+bool_t vetor_contem_elemento(void* vetor, int tamanho, void* elemento_procura, tipo_primitivo_t tipo_de_dados_vetor) {
+    int indice;
+    bool_t encontrado = FALSE;
+    switch (tipo_de_dados_vetor) {  // Interpreta os parâmetros conforme o tipo de dados do vetor
+        case INT:
+            for (indice = 0; indice < tamanho; indice++)
+                if (*((int*) vetor + indice) == *((int*) elemento_procura)) encontrado = TRUE;
+            break;
+        case FLOAT:
+            for (indice = 0; indice < tamanho; indice++)
+                if (*((float*) vetor + indice) == *((float*) elemento_procura)) encontrado = TRUE;
+            break;
+        case CHAR:
+            for (indice = 0; indice < tamanho; indice++)
+                if (*((char*) vetor + indice) == *((char*) elemento_procura)) encontrado = TRUE;
+            break;
+        case STRING:
+            for (indice = 0; indice < tamanho; indice++)
+                if (strcmp((char*) vetor + indice, (char*) elemento_procura) == 0) encontrado = TRUE;
+            break;
+    } // Sem caso default para que o compilador nos avise de casos não tratados
+    return encontrado;
+}
+
+/**
+ * @brief Verifica se um determinado NIF é válido calculando o dígito de controlo
+ *
+ * O algoritmo de validação do NIF foi adaptado de:
+ * - https://pt.wikipedia.org/wiki/N%C3%BAmero_de_identifica%C3%A7%C3%A3o_fiscal
+ *
+ * Segundo a documentação, o check digit é calculado da seguinte forma:
+ *  1 - Multiplicar o 8º digito por 2, o 7º por 3, o 6º por 4, o 5º por 5, o 4º por 6, o 3º por 7, o 2º por 8 e o 1º por 9.
+ *  2 - Somar os resultados obtidos.
+ *  3 - Calcular o resto da divisão do número por 11.
+ *      3.1 - Se o resto for 0 ou 1 o check digit será 0.
+ *      3.1 - Se for outro qualquer algarismo X, o check digit será 11 - X.
+ *
+ * @param nif
+ * @return
+ */
+bool_t nif_valido(int nif) {
+    // Para não ter que converter o NIF numa string podemos usar operações matemáticas para obter os dígitos
+    int check_digit = nif % 10;             // O último dígito é o check digit
+    int soma = 0;                           // Resultado da soma dos dígitos multiplicados pelos seus respetivos pesos
+    int multiplicador = 2;                  // O multiplicador começa em 2 e vai até 9 (1º digito)
+    int resto;                              // Resto da divisão da soma por 11
+    bool_t valido = FALSE;
+
+    nif /= 10;                              // Eliminar o último dígito do NIF
+
+    for (int i = 0; i < 8; i++) {           // Para cada um dos 8 dígitos restantes do NIF (passo 1 e 2)
+        soma += (nif % 10) * multiplicador; // Multiplicar o dígito pelo seu peso e adicionar ao resultado
+        nif /= 10;                          // Eliminar o último dígito do NIF
+        multiplicador++;                    // Incrementar o multiplicador (peso)
+    }
+
+    resto = soma % 11;                      // Calcular o resto da divisão por 11 (passo 3)
+
+    if (resto == 0 || resto == 1) valido = check_digit == 0;  // Se o resto for 0 ou 1 o check digit é 0 (passo 3.1)
+    else valido = check_digit == 11 - resto;                  // Se o resto for outro qualquer algarismo X, o check digit é 11 - X (passo 3.2)
+    return valido;
+}
+
+/**
+ * @brief Esta função valida um email de acordo com o RFC 5322
+ * 
+ * As restrições de validação do email foram adaptadas do FRC 5322, partindo do seguinte artigo:
+ * - https://www.mailboxvalidator.com/resources/articles/acceptable-email-address-syntax-rfc/
+ *
+ * Segundo a IETF, a parte local do email pode conter qualquer sequência de 64 bytes que consista em
+ * caracteres alfanuméricos ou qualquer um dos seguintes caracteres: ! # $ % & ' * + - / = ? ^ _ ` { | } ~
+ * 
+ * NOTA: O "." não pode ser o primeiro ou último caractere da parte local do email. E não deve ser seguido
+ *       de outro ".".
+ * 
+ * A parte do domínio do email não pode exceder os 255 caracteres e deve obedecer às regras de 
+ * especificação de nomes de domínio. Consiste numa sequência de DNS labels separadas por pontos, em
+ * que cada label não deve exceder os 63 caracteres (RFC 1035). Cada label é uma combinação de caracteres alfanuméricos
+ * e hífens.
+ * 
+ * NOTA: Os TLDs (top level domains) não podem ser apenas números. Os hífens não podem ser o primeiro ou
+ *      último caractere de uma label.
+ *
+ * @param mail
+ * @return bool_t
+ */
+bool_t email_valido(char* mail) {
+    bool_t valido = FALSE;
+    int tamanho = strlen(mail);
+    int indice = 0;
+    int indice_label = 0;
+    int indice_local = 0;
+    int indice_dominio = 0;
+    int indice_tld = 0;
+    int tamanho_local = 0;
+    int tamanho_dominio = 0;
+    int tamanho_tld = 0;
+    char local[64];
+    char dominio[255];
+    char tld[63];
+    bool_t local_valido = FALSE;
+    bool_t dominio_valido = FALSE;
+    bool_t tld_valido = FALSE;
+
+    // Verificar se o email tem o tamanho máximo permitido
+    if (tamanho > 254) return FALSE;
+
+    // Verificar se o email tem o formato esperado
+    if (strchr(mail, '@') == NULL) return FALSE;
+
+    // Separar o email em local e domínio
+    while (mail[indice] != '@') {
+        local[indice_local] = mail[indice];
+        indice_local++;
+        indice++;
+    }
+    indice++; // Ignorar o @
+    while (mail[indice] != '\0') {
+        dominio[indice_dominio] = mail[indice];
+        indice_dominio++;
+        indice++;
+    }
+
+    // Verificar se o local do email tem o tamanho máximo permitido
+    if (indice_local > 64) return FALSE;
+
+    // Verificar se o domínio do email tem o tamanho máximo permitido
+    if (indice_dominio > 255) return FALSE;
+
+    // Verificar se o local do email é válido
+    for (int i = 0; i < indice_local; i++) {
+        if (local[i] == '.') {
+            if (i == 0 || i == indice_local - 1) return FALSE;
+            if (local[i + 1] == '.') return FALSE;
+        }
+        if (isalnum(local[i]) || local[i] == '!' || local[i] == '#' || local[i] == '$' || local[i] == '%' || local[i] == '&' || local[i] == '\'' || local[i] == '*' || local[i] == '+' || local[i] == '-' || local[i] == '/' || local[i] == '=' || local[i] == '?' || local[i] == '^' || local[i] == '_' || local[i] == '`' || local[i] == '{' || local[i] == '|' || local[i] == '}' || local[i] == '~') {
+            local_valido = TRUE;
+        } else {
+            local_valido = FALSE;
+            break;
+        }
+    }
+
+    return valido;
+}
 
 /* ========================================================== */
+/* =                      DATA & HORA                       = */
+/* ========================================================== */
 
+/**
+ * @brief Função que retorna a data atual no formato definido na constante DATA_FORMATO
+ * @return
+ */
 char* obter_data_atual() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     char* data_atual = (char*) malloc(sizeof(char) * 11);
-    sprintf(data_atual, "%02d/%02d/%04d", data->tm_mday, data->tm_mon + 1, data->tm_year + 1900); // Formato DD/MM/AAAA
+    sprintf(data_atual, DATA_FORMATO, data->tm_mday, data->tm_mon + 1, data->tm_year + 1900); // Formato DD/MM/AAAA
     return data_atual;
 }
 
-
+/**
+ * @brief Função que retorna a hora atual no formato definido na constante HORA_FORMATO_COMPLETO
+ * @return
+ */
 char* obter_hora_atual_com_segundos() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     char* hora_atual = (char*) malloc(sizeof(char) * 9);
-    sprintf(hora_atual, "%d:%d:%d", data->tm_hour, data->tm_min, data->tm_sec);
+    sprintf(hora_atual, HORA_FORMATO_COMPLETO, data->tm_hour, data->tm_min, data->tm_sec);
     return hora_atual;
+}
+
+/* ========================================================== */
+
+inline_ void string_para_minusculas(char* string) {
+    int indice;
+    for (indice = 0; indice < strlen(string); indice++)
+        string[indice] = tolower(string[indice]);
+}
+
+inline_ void string_para_maiusculas(char* string) {
+    int indice;
+    for (indice = 0; indice < strlen(string); indice++)
+        string[indice] = toupper(string[indice]);
+}
+
+
+/* ========================================================== */
+/* =                         MENUS                          = */
+/* ========================================================== */
+
+void menu_participantes(estado_programa_t* estado_programa) {
+
 }
