@@ -9,6 +9,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
 
 // A keyword "inline" parecia causar problemas com o GCC na minha
 // máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
@@ -29,6 +32,7 @@
 /// MACROS ///
 #define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
 #define limpar_ecra() printf(ESCAPE_CODE_LIMPAR_CONSOLA)     // Definir uma macro para limpar o ecrã
+#define obter_timestamp() time(NULL)                         // Defini uma macro para obter uma timestamp
 #define TESTE 1                                              // Flag de teste
 
 // Ficheiros //
@@ -41,7 +45,7 @@
 #define NUMERO_MAXIMO_DE_ATIVIDAES  200
 #define NUMERO_MAXIMO_DE_INSCRICOES 10000
 #define TAMANHO_MAXIMO_NOME 50
-#define TAMANHO_MAXIMO_EMAIL TAMANHO_MAXIMO_NOME
+#define TAMANHO_MAXIMO_EMAIL 320         // 64 caracteres para a parte local + 1 para o @ + 255 caracteres para o domínio segundo o RFC 5321
 #define TAMANHO_MAXIMO_ESCOLA 10
 #define TAMANHO_MAXIMO_DESIGNACAO 100
 #define TAMANHO_MAXIMO_LOCAL TAMANHO_MAXIMO_NOME
@@ -50,8 +54,16 @@
 #define TAMANHO_DATA 11
 #define TAMANHO_HORA 6
 
+#define DATA_FORMATO "%02d/%02d/%04d" // (DD/MM/AAAA)
+#define HORA_FORMATO "%02d:%02d"      // (HH:MM)
+#define HORA_FORMATO_COMPLETO "%02d:%02d:%02d" // (HH:MM:SS)
 
-/// TIPOS E ESTRUTURAS ///
+
+/* ========================================================== */
+/* =                 UTILITÁRIOS DE OUTPUT                  = */
+/* ========================================================== */
+
+
 typedef enum {
     FALSE = 0,
     TRUE = 1
@@ -61,6 +73,55 @@ typedef enum {
     OK = 0,
     ERRO = -1
 } codigo_erro_t;
+
+// A enumeração dos tipos primitivos é usada para que algumas funções genéricas no programa possam
+// interpretar os parâmetros de entrada corretamente
+// (ex: função vetor_contem_elemento(void*, int, void*, tipo_primitivo_t))
+// Os templates e o meta-programming do C++ seriam uma alternativa melhor mas como é óbvio, não existem no C
+typedef enum {
+    INT = 0,
+    FLOAT = 1,
+    STRING = 2,
+    CHAR = 3,
+} tipo_primitivo_t;
+
+// Enumerações com as opções de cada menu do programa
+typedef enum {                          // Menu principal
+    MENU_PARTICIPANTES = 1,
+    MENU_ATIVIDADES,
+    MENU_INSCRICAO,
+    ESTATISTICAS,
+    SALVAR,
+    SAIR
+} opcao_menu_principal_t;
+
+typedef enum {                          // Menu de participantes
+    INSERIR_PARTICIPANTE = 1,
+    REMOVER_PARTICIPANTE,
+    LISTAR_PARTICIPANTES,
+    VOLTAR_MENU_PRINCIPAL_PARTICIPANTES
+} opcao_menu_participantes_t;
+
+typedef enum {                          // Menu de atividades
+    INSERIR_ATIVIDADE = 1,
+    REMOVER_ATIVIDADE,
+    LISTAR_ATIVIDADES,
+    VOLTAR_MENU_PRINCIPAL_ATIVIDADES
+} opcao_menu_atividades_t;
+
+typedef enum {                          // Menu de inscrições
+    INSCREVER_PARTICIPANTE = 1,
+    REMOVER_INSCRICAO,
+    LISTAR_INSCRICOES,
+    VOLTAR_MENU_PRINCIPAL_INSCRICOES
+} opcao_menu_inscricoes_t;
+
+typedef enum {                          // Menu de estatísticas
+    NUMERO_DE_ATIVIDADES_POR_ASSOCIACAO = 1,
+    PERCENTAGEM_DE_INSCRICOES_POR_ESCOLA,
+    VALOR_TOTAL_DAS_INSCRICOES_EM_HORIZONTE_TEMPORAL,
+    VOLTAR_MENU_PRINCIPAL_ESTATISTICAS
+} opcao_menu_estatisticas_t;
 
 
 /* ========================================================== */
@@ -108,9 +169,9 @@ typedef struct {
  * Desta forma, o estado do programa é acessível a todas as funções que o precisam de manipular ou consultar.
  */
 typedef struct {
-    participante_t participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];   // Vetor de participantes
-    atividade_t    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];          // Vetor de atividades
-    inscricao_t    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];         // Vetor de inscrições
+    participante_t** participantes;   // Vetor de participantes
+    atividade_t**    atividades;      // Vetor de atividades
+    inscricao_t**    inscricoes;      // Vetor de inscrições
     int*           numero_de_participantes;                         // Contadores
     int*           numero_de_atividades;
     int*           numero_de_inscricoes;
@@ -125,11 +186,10 @@ typedef struct {
 /* =                      PROTÓTIPOS                        = */
 /* ========================================================== */
 
-// TODO: Criar implementações para estas funções
 participante_t* criar_participante(char*, char*, int, char*, int, estado_programa_t*);
 atividade_t* criar_atividade(char*, char*, char*, char*, char*, char*, float, estado_programa_t*);
 inscricao_t* criar_inscricao(int, int, estado_programa_t*);
-estado_programa_t* criar_estado_programa(participante_t[], atividade_t[], inscricao_t[], int*, int*, int*, bool_t*);
+estado_programa_t* criar_estado_programa(participante_t**, atividade_t**, inscricao_t**, int*, int*, int*, bool_t*);
 
 void libertar_participante(participante_t*);
 void libertar_atividade(atividade_t*);
@@ -162,9 +222,24 @@ codigo_erro_t guardar_dados(const char*, estado_programa_t*);
 
 /* ========================================================== */
 
-void inserir_participante(estado_programa_t*);
-void inserir_atividade(estado_programa_t*);
-void inserir_inscricao(estado_programa_t*);
+void  ler_string(const char*, char*, int);
+int   ler_inteiro_intervalo(const char*, int, int);
+float ler_float_intervalo(const char*, float, float);
+char  ler_char(const char*);
+
+void  ler_escola(const char*, char*, int);
+void  ler_data(const char*, char*);
+void  ler_hora(const char*, char*);
+void  ler_email(const char*, char*);
+int   ler_nif(const char*);
+
+participante_t* ler_participante(estado_programa_t*);
+atividade_t* ler_atividade(estado_programa_t*) {};
+inscricao_t* ler_inscricao(estado_programa_t*) {};
+
+codigo_erro_t inserir_participante(estado_programa_t*);
+codigo_erro_t inserir_atividade(estado_programa_t*);
+codigo_erro_t inserir_inscricao(estado_programa_t*);
 
 /* ========================================================== */
 
@@ -172,6 +247,45 @@ void inicializar_vetores(estado_programa_t*);
 bool_t ficheiro_existe(const char*);
 
 /* ========================================================== */
+
+void listar_participantes(estado_programa_t*);
+void listar_atividades(estado_programa_t*);
+void listar_inscricoes(estado_programa_t*);
+
+/* ========================================================== */
+
+int procurar_atividade_por_id(int, estado_programa_t*) {};
+int procurar_participante_por_id(int, estado_programa_t*) {};
+int procurar_inscricao_por_id(int, estado_programa_t*) {};
+
+/* ========================================================== */
+
+char* obter_data_atual();
+char* obter_hora_atual();
+char* obter_hora_atual_com_segundos();
+int timestamp();
+
+/* ========================================================== */
+
+bool_t confirmar_saida(estado_programa_t*);
+bool_t vetor_contem_elemento(void*, int, void*, tipo_primitivo_t);
+bool_t nif_valido(int);
+bool_t email_valido(char*);
+bool_t data_valida(char*);
+bool_t hora_valida(char*);
+
+/* ========================================================== */
+
+opcao_menu_principal_t menu_principal() {};
+void menu_participantes(estado_programa_t*);
+void menu_atividades(estado_programa_t*) {};
+void menu_inscricoes(estado_programa_t*) {};
+void menu_estatisticas(estado_programa_t*) {};
+
+/* ========================================================== */
+
+inline_ void string_para_minusculas(char*);
+inline_ void string_para_maiusculas(char*);
 
 
 
@@ -184,12 +298,13 @@ int main() {
     int numero_de_participantes = 0;
     int numero_de_atividades = 0;
     int numero_de_inscricoes = 0;
-    char confirmacao_saida;
 
-    participante_t participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
-    atividade_t    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
-    inscricao_t    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
+    participante_t* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
+    atividade_t*    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
+    inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
     bool_t         dados_guardados = FALSE;
+    bool_t         sair = FALSE;
+    opcao_menu_principal_t opcao_menu;
 
     /// ESTADO DO PROGRAMA  ///
     // Criação do estado do programa
@@ -205,13 +320,51 @@ int main() {
     /// LOOP PRINCIPAL ///
     do {
         limpar_ecra();
-        menu_principal(estado_programa);
-    } while(confirmacao_saida != 'S');
+        opcao_menu = menu_principal();
+
+        switch (opcao_menu) {
+            case MENU_PARTICIPANTES:
+                menu_participantes(estado_programa);
+                break;
+            case MENU_ATIVIDADES:
+                menu_atividades(estado_programa);
+                break;
+            case MENU_INSCRICAO:
+                menu_inscricoes(estado_programa);
+                break;
+            case ESTATISTICAS:
+                menu_estatisticas(estado_programa);
+                break;
+            case SALVAR:
+                if (estado_programa->dados_guardados == FALSE) {
+                    if (guardar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
+                        printf("Erro ao guardar dados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                    } else {
+                        printf("Dados guardados com sucesso no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                    }
+                } else {    // Se os dados já tiverem sido guardados
+                    printf("Os dados já se encontram guardados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
+                }
+                break;
+            case SAIR:
+                sair = confirmar_saida(estado_programa);
+        } // Sem caso default para que o compilador nos avise de casos não tratados
+    } while(!sair);
 
     return OK;
 }
 
+
 /* ========================================================== */
+/* =               GUARDAR & CARREGAR DADOS                 = */
+/* ========================================================== */
+
+void inicializar_vetores(estado_programa_t* estado_programa) {
+    int i;
+    for (i = 0; i < NUMERO_MAXIMO_DE_PARTICIPANTES; i++) estado_programa->participantes[i] = NULL;
+    for (i = 0; i < NUMERO_MAXIMO_DE_ATIVIDAES; i++) estado_programa->atividades[i] = NULL;
+    for (i = 0; i < NUMERO_MAXIMO_DE_INSCRICOES; i++) estado_programa->inscricoes[i] = NULL;
+}
 
 /**
  * @brief Verifica se um ficheiro existe.
@@ -225,9 +378,6 @@ bool_t ficheiro_existe(const char* caminho) {
     return existe;
 }
 
-
-/// GUARDAR/CARREGAR DADOS ///
-
 /**
  * @brief Guarda os participantes do vetor no ficheiro
  * @param estado_programa
@@ -236,11 +386,12 @@ bool_t ficheiro_existe(const char* caminho) {
  */
 void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de participantes inseridos
+    int indice;
     fwrite(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
 
     // Guardar os participantes
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        fwrite(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        fwrite(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
@@ -252,11 +403,12 @@ void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
  */
 void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de atividades inseridas
+    int indice;
     fwrite(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
 
     // Guardar as atividades
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        fwrite(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        fwrite(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
@@ -268,43 +420,69 @@ void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
  */
 void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de inscrições inseridas
+    int indice;
     fwrite(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
 
     // Guardar as inscrições
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        fwrite(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        fwrite(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
+/**
+ * @brief Carrega os participantes do ficheiro para o vetor
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de participantes inseridos
+    int indice;
     fread(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
 
     // Carregar os participantes
-    for (int i = 0; i < *estado_programa->numero_de_participantes; i++) {
-        fread(&estado_programa->participantes[i], sizeof(participante_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        fread(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
+/**
+ * @brief Carrega as atividades do ficheiro para o vetor
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de atividades inseridas
+    int indice;
     fread(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
 
     // Carregar as atividades
-    for (int i = 0; i < *estado_programa->numero_de_atividades; i++) {
-        fread(&estado_programa->atividades[i], sizeof(atividade_t), 1, ficheiro);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        fread(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
+/**
+ * @brief Carrega as inscrições do ficheiro para o vetor
+ * @param estado_programa
+ * @param ficheiro
+ * @return void
+ */
 void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de inscrições inseridas
+    int indice;
     fread(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
 
     // Carregar as inscrições
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        fread(&estado_programa->inscricoes[i], sizeof(inscricao_t), 1, ficheiro);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        fread(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
+
+
+/// GUARDAR & CARREGAR ESTADO ///
+
 
 /**
  * @brief Guarda o estado do programa num ficheiro
@@ -346,6 +524,20 @@ estado_programa_t* carregar_estado_programa(const char* caminho) {
     return estado_programa;
 }
 
+
+/// GUARDAR & CARREGAR DADOS ///
+
+/**
+ * @brief Guarda os dados do programa num ficheiro
+ * @param caminho
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t guardar_dados(const char* caminho, estado_programa_t* estado_programa) {
+    codigo_erro_t codigo_erro = guardar_estado_programa(caminho, estado_programa);
+    return codigo_erro;
+}
+
 /**
  * @brief Carrega os dados do programa salvos no ficheiro save e guarda-os na estrutura do estado do programa.
  * @param caminho
@@ -365,125 +557,336 @@ codigo_erro_t carregar_dados(const char* caminho, estado_programa_t* estado_prog
 }
 
 
+/* ========================================================== */
+/* =                 UTILITÁRIOS DE INPUT                   = */
+/* ========================================================== */
 
-/* ========================================================== app.c*/
+/**
+ * @brief Lê uma string com o tamanho especificado
+ * @param string
+ * @param tamanho
+ * @return void
+ */
+void ler_string(const char* mensagem, char* string, int tamanho) {
+    printf("%s", mensagem);
+    fgets(string, tamanho, stdin);
+    string[strcspn(string, "\n")] = '\0';
+}
 
-t_participante* criar_participante(int identificador, char* nome, char* escola, int nif, char* email, int telefone) {
-    t_participante* participante = (t_participante*) malloc(sizeof(t_participante));
-    participante->identificador = identificador;
-    participante->nome = nome;
-    participante->escola = escola;
+/**
+ * @brief Lê um inteiro compreendido entre os valores especificados
+ * @param mensagem
+ * @return int
+ */
+int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo) {
+    int inteiro;
+
+    do {
+        printf("%s", mensagem);
+        scanf("%d", &inteiro);
+        getchar();
+        if (inteiro < minimo || inteiro > maximo)
+            printf("Valor inválido. Introduza um valor entre %d e %d.\n", minimo, maximo);
+
+    } while (inteiro < minimo || inteiro > maximo);
+
+    return inteiro;
+}
+
+/**
+ * @brief Lê um float compreendido entre os valores especificados
+ * @param mensagem
+ * @return float
+ */
+float ler_float_intervalo(const char* mensagem, float minimo, float maximo) {
+    float flutuante;
+
+    do {
+        printf("%s", mensagem);
+        scanf("%f", &flutuante);
+        getchar();
+        if (flutuante < minimo || flutuante > maximo)
+            printf("Valor inválido. Introduza um valor entre %.2f e %.2f.\n", minimo, maximo);
+
+    } while (flutuante < minimo || flutuante > maximo);
+
+    return flutuante;
+}
+
+char ler_char(const char* mensagem) {
+    char caracter;
+    printf("%s", mensagem);
+    scanf(" %c", &caracter);
+    return caracter;
+}
+
+/**
+ * @brief Lê a escola de um participante até que a escola inserida esteja dentro das opções possíveis
+ * @param mensagem
+ * @param output
+ * @param tamanho_maximo
+ */
+void ler_escola(const char* mensagem, char* output, int tamanho_maximo) {
+    char escola[TAMANHO_MAXIMO_ESCOLA];
+    char* escolas_possiveis[] = {"ESTG", "ESECS", "ESSLEI", "ESAD", "ESTM"};
+    do {
+        ler_string(mensagem, escola, TAMANHO_MAXIMO_ESCOLA);
+        string_para_maiusculas(escola);
+        if (!vetor_contem_elemento(escolas_possiveis, 5, escola, STRING))
+            printf("Escola inválida. Escolas possíveis: ESTG, ESECS, ESSLEI, ESAD, ESTM.\n");
+    } while (!vetor_contem_elemento(escolas_possiveis, 5, escola, STRING));
+}
+
+/**
+ * @brief Lê um NIF até que o NIF inserido seja válido
+ *
+ * @warning O NIF deve ser composto por 9 dígitos e deve seguir o algoritmo de validação do NIF
+ *
+ * @param mensagem
+ * @return int
+ */
+int ler_nif(const char* mensagem) {
+    int nif;
+    do {
+        nif = ler_inteiro_intervalo(mensagem, 100000000, 999999999);
+        if (!nif_valido(nif))
+            printf("NIF inválido. Introduza um NIF válido.\n");
+    } while (!nif_valido(nif));
+    return nif;
+}
+
+void ler_email(const char* mensagem, char* output) {
+    char email[TAMANHO_MAXIMO_EMAIL];
+    do {
+        ler_string(mensagem, email, TAMANHO_MAXIMO_EMAIL);
+        if (!email_valido(email))
+            printf("Email inválido. Introduza um email válido.\n");
+    } while (!email_valido(email));
+    strcpy(output, email);
+}
+
+/**
+ * @brief Lê os dados para a criação de um participante e guarda-os na estrutura
+ * @param estado_programa
+ * @return participante_t*
+ */
+participante_t* ler_participante(estado_programa_t* estado_programa) {
+    participante_t* participante = NULL;
+    char nome[TAMANHO_MAXIMO_NOME];
+    char escola[TAMANHO_MAXIMO_ESCOLA];
+    char email[TAMANHO_MAXIMO_EMAIL];
+    int  nif, telefone;
+
+    ler_string("Nome do participante: ", nome, TAMANHO_MAXIMO_NOME);
+    ler_escola("Escola do participante: ", escola, TAMANHO_MAXIMO_ESCOLA);
+    nif = ler_nif("NIF do participante: ");
+
+    return participante;
+}
+
+/**
+ * @brief Insere um participante no vetor de participantes
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
+    codigo_erro_t resultado = ERRO;
+    participante_t* participante = ler_participante(estado_programa);
+
+    if (participante != NULL) {
+        estado_programa->participantes[*estado_programa->numero_de_participantes] = participante;
+        (*estado_programa->numero_de_participantes)++;
+        resultado = OK;
+    }
+
+    return resultado;
+}
+
+/**
+ * @brief Insere uma atividade no vetor de atividades
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
+    codigo_erro_t resultado = ERRO;
+    atividade_t* atividade = ler_atividade(estado_programa);
+
+    if (atividade != NULL) {
+        estado_programa->atividades[*estado_programa->numero_de_atividades] = atividade;
+        (*estado_programa->numero_de_atividades)++;
+        resultado = OK;
+    }
+
+    return resultado;
+}
+
+/**
+ * @brief Insere uma inscrição no vetor de inscrições
+ * @param estado_programa
+ * @return codigo_erro_t
+ */
+codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
+    codigo_erro_t resultado = ERRO;
+    inscricao_t* inscricao = ler_inscricao(estado_programa);
+
+    if (inscricao != NULL) {
+        estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
+        (*estado_programa->numero_de_inscricoes)++;
+        resultado = OK;
+    }
+
+    return resultado;
+}
+
+
+/* ========================================================== */
+/* =                UTILITÁRIOS DOS STRUCTS                 = */
+/* ========================================================== */
+
+
+/**
+ * @brief Aloca memória para um participante e inicializa os seus campos
+ * @param nome
+ * @param escola
+ * @param nif
+ * @param email
+ * @param telefone
+ * @param estado_programa
+ * @return participante_t*
+ */
+participante_t* criar_participante(char* nome, char* escola, int nif, char* email, int telefone, estado_programa_t* estado_programa) {
+    participante_t* participante = (participante_t*) malloc(sizeof(participante_t));
+    participante->identificador = *estado_programa->numero_de_participantes;
+    strcpy(participante->nome, nome);
+    strcpy(participante->escola, escola);
     participante->nif = nif;
-    participante->email = email;
+    strcpy(participante->email, email);
     participante->telefone = telefone;
     return participante;
 }
 
-t_atividade* criar_atividade(int identificador, char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor) {
-    t_atividade* atividade = (t_atividade*) malloc(sizeof(t_atividade));
-    atividade->identificador = identificador;
-    atividade->designacao = designacao;
-    atividade->data = data;
-    atividade->hora = hora;
-    atividade->local = local;
-    atividade->tipo = tipo;
-    atividade->associacao_estudantes = associacao_estudantes;
+/**
+ * @brief Aloca memória para uma atividade e inicializa os seus campos
+ * @param nome
+ * @param descricao
+ * @param data
+ * @param hora_inicio
+ * @param hora_fim
+ * @param estado_programa
+ * @return atividade_t*
+ */
+atividade_t* criar_atividade(char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor, estado_programa_t* estado_programa) {
+    atividade_t* atividade = (atividade_t*) malloc(sizeof(atividade_t));
+    atividade->identificador = *estado_programa->numero_de_atividades;
+    strcpy(atividade->designacao, designacao);
+    strcpy(atividade->data, data);
+    strcpy(atividade->hora, hora);
+    strcpy(atividade->local, local);
+    strcpy(atividade->tipo, tipo);
+    strcpy(atividade->associacao_estudantes, associacao_estudantes);
     atividade->valor = valor;
     return atividade;
 }
 
-t_inscricao* criar_inscricao(int identificador, int id_participante, int id_atividade, t_atividade** atividades) {
-    int indice_procura;
-    int numero_atividades = tamanho_vetor((void**) atividades);
+/**
+ * @brief Aloca memória para uma inscrição e inicializa os seus campos
+ * @param participante
+ * @param atividade
+ * @param estado_programa
+ * @return inscricao_t*
+ */
+inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_programa_t* estado_programa) {
+    int indice_procura_atividades, indice_procura_participantes;
+    int numero_atividades = *estado_programa->numero_de_atividades;
+    inscricao_t* inscricao = NULL;
 
-    t_inscricao* inscricao = (t_inscricao*) malloc(sizeof(t_inscricao));
-    inscricao->identificador = identificador;
-    inscricao->id_participante = id_participante;
-    inscricao->id_atividade = id_atividade;
+    // Procurar o participante e a atividade com os IDs especificados
+    indice_procura_atividades = procurar_atividade_por_id(id_atividade, estado_programa);
+    indice_procura_participantes = procurar_participante_por_id(id_participante, estado_programa);
 
-    // Procurar o valor associado à atividade com o ID passado
-    indice_procura = procurar_atividade_por_id(atividades, numero_atividades, id_atividade);
-    if (indice_procura == -1) {
-        return NULL;
+    if (indice_procura_atividades != ERRO && indice_procura_participantes != ERRO) {
+        inscricao = (inscricao_t*) malloc(sizeof(inscricao_t));
+
+        // Atribuir os valores aos campos da inscrição
+        inscricao->identificador = *estado_programa->numero_de_inscricoes;
+        inscricao->id_participante = id_participante;
+        inscricao->id_atividade = id_atividade;
+
+        // A inscrição tem a data e hora da sua criação
+        strcpy(inscricao->data, obter_data_atual());
+        strcpy(inscricao->hora, obter_hora_atual_com_segundos());
     }
 
-    inscricao->valor_pago = atividades[indice_procura]->valor;
-    inscricao->data = obter_data_atual();
-    inscricao->hora = obter_hora_atual_completa();
     return inscricao;
 }
 
-
-t_estado_programa* criar_estado_programa(t_participante** vetor_participantes, t_atividade** vetor_atividades,
-                                         t_inscricao** vetor_inscricoes, int* contador_participantes,
-                                         int* contador_atividades, int* contador_inscricoes, const char* cor_texto, const char* cor_fundo)
+/**
+ * @brief Aloca memória para o estado do programa e inicializa os seus campos
+ * @param vetor_participantes
+ * @param vetor_atividades
+ * @param vetor_inscricoes
+ * @param contador_participantes
+ * @param contador_atividades
+ * @param contador_inscricoes
+ * @param programa_salvo
+ * @return estado_programa_t*
+ */
+estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, atividade_t** vetor_atividades,
+                                         inscricao_t** vetor_inscricoes, int* contador_participantes,
+                                         int* contador_atividades, int* contador_inscricoes, bool_t* programa_salvo)
 {
-    t_estado_programa* estado_programa = (t_estado_programa*) malloc(sizeof(t_estado_programa));
+    estado_programa_t* estado_programa = (estado_programa_t*) malloc(sizeof(estado_programa_t));
     estado_programa->participantes = vetor_participantes;
     estado_programa->atividades = vetor_atividades;
     estado_programa->inscricoes = vetor_inscricoes;
-    estado_programa->numero_participantes_inseridos = contador_participantes;
-    estado_programa->numero_atividadades_inseridas = contador_atividades;
+    estado_programa->numero_de_atividades = contador_participantes;
+    estado_programa->numero_de_atividades = contador_atividades;
     estado_programa->numero_de_inscricoes = contador_inscricoes;
-    estado_programa->ultimo_save = 0;
-    strcpy(estado_programa->cor_texto, cor_texto);
-    strcpy(estado_programa->cor_fundo, cor_fundo);
+    estado_programa->dados_guardados = programa_salvo;
     return estado_programa;
 }
 
-void libertar_estado_programa(t_estado_programa* estado_programa) {
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) libertar_participante(estado_programa->participantes[i]);
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) libertar_atividade(estado_programa->atividades[i]);
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) libertar_inscricao(estado_programa->inscricoes[i]);
+
+/* ========================================================== */
+/* =          UTILITÁRIOS DE DESACOLAÇÃO DE MEMÓRIA         = */
+/* ========================================================== */
+
+
+void libertar_estado_programa(estado_programa_t* estado_programa) {
+    int indice;
+    for (indice= 0; indice < *estado_programa->numero_de_participantes; indice++) libertar_participante(estado_programa->participantes[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_atividades; indice++) libertar_atividade(estado_programa->atividades[indice]);
+    for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) libertar_inscricao(estado_programa->inscricoes[indice]);
     free(estado_programa);
 }
 
 
-/**
- * @brief Liberta a memória alocada para um participante
- *
- * @param participante
- */
-inline_ void libertar_participante(t_participante* participante) {
-    free(participante);
-}
+inline_ void libertar_participante(participante_t* participante) {free(participante);}
+inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
+inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
-/**
- * @brief Liberta a memória alocada para uma atividade
- * @param atividade
- */
-inline_ void libertar_atividade(t_atividade* atividade) {
-    free(atividade);
-}
 
-/**
- * @brief Liberta a memória alocada para uma inscrição
- * @param inscricao
- */
-inline_ void libertar_inscricao(t_inscricao* inscricao) {
-    free(inscricao);
-}
+/* ========================================================== */
+/* =                 UTILITÁRIOS DE OUTPUT                  = */
+/* ========================================================== */
 
-void mostrar_estado_programa(t_estado_programa* estado_programa) {
+void mostrar_estado_programa(estado_programa_t* estado_programa) {
+    int indice;
     printf("Participantes:\n");
-    for (int i = 0; i < *estado_programa->numero_participantes_inseridos; i++) {
-        mostrar_participante(estado_programa->participantes[i]);
+    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
+        mostrar_participante(estado_programa->participantes[indice]);
     }
     printf("Atividades:\n");
-    for (int i = 0; i < *estado_programa->numero_atividadades_inseridas; i++) {
-        mostrar_atividade(estado_programa->atividades[i]);
+    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+        mostrar_atividade(estado_programa->atividades[indice]);
     }
     printf("Inscrições:\n");
-    for (int i = 0; i < *estado_programa->numero_de_inscricoes; i++) {
-        mostrar_inscricao(estado_programa->inscricoes[i]);
+    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+        mostrar_inscricao(estado_programa->inscricoes[indice]);
     }
+}
 
-    /**
- * @brief Mostra um participante
- *
- * @param participante
- */
-inline_ void mostrar_participante(t_participante* participante) {
+inline_ void mostrar_participante(participante_t* participante) {
     printf("    Identificador: %d\n", participante->identificador);
     printf("    Nome: %s\n", participante->nome);
     printf("    Escola: %s\n", participante->escola);
@@ -492,12 +895,7 @@ inline_ void mostrar_participante(t_participante* participante) {
     printf("    Telefone: %d\n\n", participante->telefone);
 }
 
-
-/**
- * @brief Mostra uma atividade
- * @param atividade
- */
-inline_ void mostrar_atividade(t_atividade* atividade) {
+inline_ void mostrar_atividade(atividade_t* atividade) {
     printf("    Identificador: %d\n", atividade->identificador);
     printf("    Designação: %s\n", atividade->designacao);
     printf("    Data: %s\n", atividade->data);
@@ -508,11 +906,7 @@ inline_ void mostrar_atividade(t_atividade* atividade) {
     printf("    Valor: %.2f\n", atividade->valor);
 }
 
-/**
- * @brief Mostra uma inscrição
- * @param inscricao
- */
-inline_ void mostrar_inscricao(t_inscricao* inscricao) {
+inline_ void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
     printf("    ID da Atividade: %d\n", inscricao->id_atividade);
@@ -522,5 +916,234 @@ inline_ void mostrar_inscricao(t_inscricao* inscricao) {
 }
 
 
+/* ========================================================== */
+/* =               CONFIRMAÇÕES ESPECÍFICAS                 = */
+/* ========================================================== */
+
+/**
+ * @brief Função que confirma a saída do programa
+ * @param estado_programa
+ * @return
+ */
+bool_t confirmar_saida(estado_programa_t* estado_programa) {
+    bool_t confirmacao;
+    char mensagem[100];
+
+    // Definir a mensagem consoante o estado do programa
+    estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ")
+                                     : strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ");
+
+    do {
+        confirmacao = ler_char(mensagem);
+        confirmacao = tolower(confirmacao);
+        if (confirmacao != 's' && confirmacao != 'n')
+            printf("Valor inválido. Introduza 's' para sim ou 'n' para não.\n");
+    } while (confirmacao != 's' && confirmacao != 'n');
+
+    return confirmacao;
+}
+
+/**
+ * @brief Função genérica de procura de dados em vetores com tipos primitivos
+ * @param vetor
+ * @param tamanho
+ * @param elemento_procura
+ * @param tipo_de_dados_vetor
+ * @return bool_t
+ */
+bool_t vetor_contem_elemento(void* vetor, int tamanho, void* elemento_procura, tipo_primitivo_t tipo_de_dados_vetor) {
+    int indice;
+    bool_t encontrado = FALSE;
+    switch (tipo_de_dados_vetor) {  // Interpreta os parâmetros conforme o tipo de dados do vetor
+        case INT:
+            for (indice = 0; indice < tamanho; indice++)
+                if (*((int*) vetor + indice) == *((int*) elemento_procura)) encontrado = TRUE;
+            break;
+        case FLOAT:
+            for (indice = 0; indice < tamanho; indice++)
+                if (*((float*) vetor + indice) == *((float*) elemento_procura)) encontrado = TRUE;
+            break;
+        case CHAR:
+            for (indice = 0; indice < tamanho; indice++)
+                if (*((char*) vetor + indice) == *((char*) elemento_procura)) encontrado = TRUE;
+            break;
+        case STRING:
+            for (indice = 0; indice < tamanho; indice++)
+                if (strcmp((char*) vetor + indice, (char*) elemento_procura) == 0) encontrado = TRUE;
+            break;
+    } // Sem caso default para que o compilador nos avise de casos não tratados
+    return encontrado;
+}
+
+/**
+ * @brief Verifica se um determinado NIF é válido calculando o dígito de controlo
+ *
+ * O algoritmo de validação do NIF foi adaptado de:
+ * - https://pt.wikipedia.org/wiki/N%C3%BAmero_de_identifica%C3%A7%C3%A3o_fiscal
+ *
+ * Segundo a documentação, o check digit é calculado da seguinte forma:
+ *  1 - Multiplicar o 8º digito por 2, o 7º por 3, o 6º por 4, o 5º por 5, o 4º por 6, o 3º por 7, o 2º por 8 e o 1º por 9.
+ *  2 - Somar os resultados obtidos.
+ *  3 - Calcular o resto da divisão do número por 11.
+ *      3.1 - Se o resto for 0 ou 1 o check digit será 0.
+ *      3.1 - Se for outro qualquer algarismo X, o check digit será 11 - X.
+ *
+ * @param nif
+ * @return
+ */
+bool_t nif_valido(int nif) {
+    // Para não ter que converter o NIF numa string podemos usar operações matemáticas para obter os dígitos
+    int check_digit = nif % 10;             // O último dígito é o check digit
+    int soma = 0;                           // Resultado da soma dos dígitos multiplicados pelos seus respetivos pesos
+    int multiplicador = 2;                  // O multiplicador começa em 2 e vai até 9 (1º digito)
+    int resto;                              // Resto da divisão da soma por 11
+    bool_t valido = FALSE;
+
+    nif /= 10;                              // Eliminar o último dígito do NIF
+
+    for (int i = 0; i < 8; i++) {           // Para cada um dos 8 dígitos restantes do NIF (passo 1 e 2)
+        soma += (nif % 10) * multiplicador; // Multiplicar o dígito pelo seu peso e adicionar ao resultado
+        nif /= 10;                          // Eliminar o último dígito do NIF
+        multiplicador++;                    // Incrementar o multiplicador (peso)
+    }
+
+    resto = soma % 11;                      // Calcular o resto da divisão por 11 (passo 3)
+
+    if (resto == 0 || resto == 1) valido = check_digit == 0;  // Se o resto for 0 ou 1 o check digit é 0 (passo 3.1)
+    else valido = check_digit == 11 - resto;                  // Se o resto for outro qualquer algarismo X, o check digit é 11 - X (passo 3.2)
+    return valido;
+}
+
+/**
+ * @brief Esta função valida um email de acordo com o RFC 5322
+ * 
+ * As restrições de validação do email foram adaptadas do FRC 5322, partindo do seguinte artigo:
+ * - https://www.mailboxvalidator.com/resources/articles/acceptable-email-address-syntax-rfc/
+ *
+ * Segundo a IETF, a parte local do email pode conter qualquer sequência de 64 bytes que consista em
+ * caracteres alfanuméricos ou qualquer um dos seguintes caracteres: ! # $ % & ' * + - / = ? ^ _ ` { | } ~
+ * 
+ * NOTA: O "." não pode ser o primeiro ou último caractere da parte local do email. E não deve ser seguido
+ *       de outro ".".
+ * 
+ * A parte do domínio do email não pode exceder os 255 caracteres e deve obedecer às regras de 
+ * especificação de nomes de domínio. Consiste numa sequência de DNS labels separadas por pontos, em
+ * que cada label não deve exceder os 63 caracteres (RFC 1035). Cada label é uma combinação de caracteres alfanuméricos
+ * e hífens.
+ * 
+ * NOTA: Os TLDs (top level domains) não podem ser apenas números. Os hífens não podem ser o primeiro ou
+ *      último caractere de uma label.
+ *
+ * @param mail
+ * @return bool_t
+ */
+bool_t email_valido(char* mail) {
+    bool_t valido = FALSE;
+    int tamanho = strlen(mail);
+    int indice = 0;
+    int indice_label = 0;
+    int indice_local = 0;
+    int indice_dominio = 0;
+    int indice_tld = 0;
+    int tamanho_local = 0;
+    int tamanho_dominio = 0;
+    int tamanho_tld = 0;
+    char local[64];
+    char dominio[255];
+    char tld[63];
+    bool_t local_valido = FALSE;
+    bool_t dominio_valido = FALSE;
+    bool_t tld_valido = FALSE;
+
+    // Verificar se o email tem o tamanho máximo permitido
+    if (tamanho > 254) return FALSE;
+
+    // Verificar se o email tem o formato esperado
+    if (strchr(mail, '@') == NULL) return FALSE;
+
+    // Separar o email em local e domínio
+    while (mail[indice] != '@') {
+        local[indice_local] = mail[indice];
+        indice_local++;
+        indice++;
+    }
+    indice++; // Ignorar o @
+    while (mail[indice] != '\0') {
+        dominio[indice_dominio] = mail[indice];
+        indice_dominio++;
+        indice++;
+    }
+
+    // Verificar se o local do email tem o tamanho máximo permitido
+    if (indice_local > 64) return FALSE;
+
+    // Verificar se o domínio do email tem o tamanho máximo permitido
+    if (indice_dominio > 255) return FALSE;
+
+    // Verificar se o local do email é válido
+    for (int i = 0; i < indice_local; i++) {
+        if (local[i] == '.') {
+            if (i == 0 || i == indice_local - 1) return FALSE;
+            if (local[i + 1] == '.') return FALSE;
+        }
+        if (isalnum(local[i]) || local[i] == '!' || local[i] == '#' || local[i] == '$' || local[i] == '%' || local[i] == '&' || local[i] == '\'' || local[i] == '*' || local[i] == '+' || local[i] == '-' || local[i] == '/' || local[i] == '=' || local[i] == '?' || local[i] == '^' || local[i] == '_' || local[i] == '`' || local[i] == '{' || local[i] == '|' || local[i] == '}' || local[i] == '~') {
+            local_valido = TRUE;
+        } else {
+            local_valido = FALSE;
+            break;
+        }
+    }
+
+    return valido;
+}
+
+/* ========================================================== */
+/* =                      DATA & HORA                       = */
+/* ========================================================== */
+
+/**
+ * @brief Função que retorna a data atual no formato definido na constante DATA_FORMATO
+ * @return
+ */
+char* obter_data_atual() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    char* data_atual = (char*) malloc(sizeof(char) * 11);
+    sprintf(data_atual, DATA_FORMATO, data->tm_mday, data->tm_mon + 1, data->tm_year + 1900); // Formato DD/MM/AAAA
+    return data_atual;
+}
+
+/**
+ * @brief Função que retorna a hora atual no formato definido na constante HORA_FORMATO_COMPLETO
+ * @return
+ */
+char* obter_hora_atual_com_segundos() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    char* hora_atual = (char*) malloc(sizeof(char) * 9);
+    sprintf(hora_atual, HORA_FORMATO_COMPLETO, data->tm_hour, data->tm_min, data->tm_sec);
+    return hora_atual;
+}
+
+/* ========================================================== */
+
+inline_ void string_para_minusculas(char* string) {
+    int indice;
+    for (indice = 0; indice < strlen(string); indice++)
+        string[indice] = tolower(string[indice]);
+}
+
+inline_ void string_para_maiusculas(char* string) {
+    int indice;
+    for (indice = 0; indice < strlen(string); indice++)
+        string[indice] = toupper(string[indice]);
+}
 
 
+/* ========================================================== */
+/* =                         MENUS                          = */
+/* ========================================================== */
+
+void menu_participantes(estado_programa_t* estado_programa) {
+
+}
