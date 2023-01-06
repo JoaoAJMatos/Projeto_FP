@@ -196,14 +196,15 @@ void libertar_atividade(atividade_t*);
 void libertar_inscricao(inscricao_t*);
 void libertar_estado_programa(estado_programa_t*);
 
-inline_ void mostrar_participante(participante_t*);
-inline_ void mostrar_atividade(atividade_t*);
-inline_ void mostrar_inscricao(inscricao_t*);
-inline_ void mostrar_estado_programa(estado_programa_t*);
+// Usamos a keyword static para evitar o aviso de compilação "'printf' is static but used in inline function"
+inline_ static void mostrar_participante(participante_t*);
+inline_ static void mostrar_atividade(atividade_t*);
+inline_ static void mostrar_inscricao(inscricao_t*);
+inline_ static void mostrar_estado_programa(estado_programa_t*);
 
-inline_ void mostrar_participantes(estado_programa_t*);
-inline_ void mostrar_atividades(estado_programa_t*);
-inline_ void mostrar_inscricoes(estado_programa_t*);
+inline_ static void mostrar_participantes(estado_programa_t*);
+inline_ static void mostrar_atividades(estado_programa_t*);
+inline_ static void mostrar_inscricoes(estado_programa_t*);
 
 /* ========================================================== */
 
@@ -870,7 +871,7 @@ inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 /* =                 UTILITÁRIOS DE OUTPUT                  = */
 /* ========================================================== */
 
-void mostrar_estado_programa(estado_programa_t* estado_programa) {
+inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
     printf("Participantes:\n");
     for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
@@ -886,7 +887,7 @@ void mostrar_estado_programa(estado_programa_t* estado_programa) {
     }
 }
 
-inline_ void mostrar_participante(participante_t* participante) {
+inline_ static void mostrar_participante(participante_t* participante) {
     printf("    Identificador: %d\n", participante->identificador);
     printf("    Nome: %s\n", participante->nome);
     printf("    Escola: %s\n", participante->escola);
@@ -895,7 +896,7 @@ inline_ void mostrar_participante(participante_t* participante) {
     printf("    Telefone: %d\n\n", participante->telefone);
 }
 
-inline_ void mostrar_atividade(atividade_t* atividade) {
+inline_ static void mostrar_atividade(atividade_t* atividade) {
     printf("    Identificador: %d\n", atividade->identificador);
     printf("    Designação: %s\n", atividade->designacao);
     printf("    Data: %s\n", atividade->data);
@@ -906,7 +907,7 @@ inline_ void mostrar_atividade(atividade_t* atividade) {
     printf("    Valor: %.2f\n", atividade->valor);
 }
 
-inline_ void mostrar_inscricao(inscricao_t* inscricao) {
+inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
     printf("    ID da Atividade: %d\n", inscricao->id_atividade);
