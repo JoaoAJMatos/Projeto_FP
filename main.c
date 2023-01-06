@@ -53,6 +53,7 @@
 #define TAMANHO_MAXIMO_AE 10
 #define TAMANHO_DATA 11
 #define TAMANHO_HORA 6
+#define TAMANHO_TELEFONE 9
 
 #define DATA_FORMATO "%02d/%02d/%04d" // (DD/MM/AAAA)
 #define HORA_FORMATO "%02d:%02d"      // (HH:MM)
@@ -221,7 +222,7 @@ codigo_erro_t guardar_dados(const char*, estado_programa_t*);
 /* ========================================================== */
 
 void  ler_string(const char*, char*, int);
-int   ler_inteiro_intervalo(const char*, int, int);
+int   ler_inteiro_intervalo(const char*, int, int, bool_t);
 float ler_float_intervalo(const char*, float, float);
 char  ler_char(const char*);
 
@@ -230,6 +231,7 @@ void  ler_data(const char*, char*);
 void  ler_hora(const char*, char*);
 void  ler_email(const char*, char*);
 int   ler_nif(const char*);
+int   ler_telefone(const char*);
 
 participante_t* ler_participante(estado_programa_t*);
 atividade_t* ler_atividade(estado_programa_t*) {};
@@ -588,14 +590,14 @@ void ler_string(const char* mensagem, char* string, int tamanho) {
  * @param mensagem
  * @return int
  */
-int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo) {
+int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo, bool_t mostrar_mensagem_erro) {
     int inteiro;
 
     do {
         printf("%s", mensagem);
         scanf("%d", &inteiro);
         getchar();
-        if (inteiro < minimo || inteiro > maximo)
+        if (inteiro < minimo || inteiro > maximo && mostrar_mensagem_erro)
             printf("Valor inválido. Introduza um valor entre %d e %d.\n", minimo, maximo);
 
     } while (inteiro < minimo || inteiro > maximo);
@@ -657,21 +659,37 @@ void ler_escola(const char* mensagem, char* output, int tamanho_maximo) {
  */
 int ler_nif(const char* mensagem) {
     int nif;
+    
     do {
-        nif = ler_inteiro_intervalo(mensagem, 100000000, 999999999);
+        nif = ler_inteiro_intervalo(mensagem, 100000000, 999999999, FALSE);
         if (!nif_valido(nif))
             printf("NIF inválido. Introduza um NIF válido.\n");
     } while (!nif_valido(nif));
+    
     return nif;
+}
+
+int ler_telefone(const char* mensagem) {
+    char telefone[TAMANHO_TELEFONE];
+
+    do {
+        ler_string(mensagem, telefone, TAMANHO_TELEFONE);
+        if (!strlen(telefone) != TAMANHO_TELEFONE)
+            printf("O numero de telemovel deve ter 9 digitos\n");
+    } while (!strlen(telefone) != TAMANHO_TELEFONE);
+
+    return atoi(telefone);
 }
 
 void ler_email(const char* mensagem, char* output) {
     char email[TAMANHO_MAXIMO_EMAIL];
+    
     do {
         ler_string(mensagem, email, TAMANHO_MAXIMO_EMAIL);
         if (!email_valido(email))
             printf("Email inválido. Introduza um email válido.\n");
     } while (!email_valido(email));
+    
     strcpy(output, email);
 }
 
@@ -685,12 +703,15 @@ participante_t* ler_participante(estado_programa_t* estado_programa) {
     char nome[TAMANHO_MAXIMO_NOME];
     char escola[TAMANHO_MAXIMO_ESCOLA];
     char email[TAMANHO_MAXIMO_EMAIL];
-    int  nif, telefone;
+    int  nif, telefone, identificador;
 
     ler_string("Nome do participante: ", nome, TAMANHO_MAXIMO_NOME);
     ler_escola("Escola do participante: ", escola, TAMANHO_MAXIMO_ESCOLA);
     nif = ler_nif("NIF do participante: ");
+    ler_email("Email do participante: ", email);
+    telefone = ler_telefone("Telefone do participante: ");
 
+    participante = criar_participante(nome, escola, nif, email, telefone, estado_programa);
     return participante;
 }
 
