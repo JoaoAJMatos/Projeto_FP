@@ -55,9 +55,11 @@
 #define TAMANHO_HORA 6
 #define TAMANHO_TELEFONE 9
 
-#define DATA_FORMATO "%02d/%02d/%04d" // (DD/MM/AAAA)
-#define HORA_FORMATO "%02d:%02d"      // (HH:MM)
-#define HORA_FORMATO_COMPLETO "%02d:%02d:%02d" // (HH:MM:SS)
+#define DATA_FORMATO "%02d/%02d/%04d"           // (DD/MM/AAAA)
+#define HORA_FORMATO "%02d:%02d"                // (HH:MM)
+#define HORA_FORMATO_COMPLETO "%02d:%02d:%02d"  // (HH:MM:SS)
+
+#define TESTE 1                         // Flag de teste
 
 
 /* ========================================================== */
@@ -226,7 +228,7 @@ int   ler_inteiro_intervalo(const char*, int, int, bool_t);
 float ler_float_intervalo(const char*, float, float);
 char  ler_char(const char*);
 
-void  ler_escola(const char*, char*, int);
+void  ler_escola(const char*, char*);
 void  ler_data(const char*, char*);
 void  ler_hora(const char*, char*);
 
@@ -296,6 +298,11 @@ void menu_estatisticas(estado_programa_t*);
 void string_para_minusculas(char*);
 void string_para_maiusculas(char*);
 void esperar_tecla(const char*);
+
+/* ========================================================== */
+
+void inserir_dados_teste(estado_programa_t*);
+
 
 
 /* ========================================================== */
@@ -581,14 +588,18 @@ codigo_erro_t carregar_dados(const char* caminho, estado_programa_t* estado_prog
  */
 void ler_string(const char* mensagem, char* string, int tamanho) {
     printf("%s", mensagem);
+    fflush(stdin);
     fgets(string, tamanho, stdin);
-    string[strcspn(string, "\n")] = '\0';
+    string[strcspn(string, "\n")] = '\0'; // Remover o '\n' do final da string
 }
 
 
 /**
  * @brief Lê um inteiro compreendido entre os valores especificados
  * @param mensagem
+ * @param minimo
+ * @param maximo
+ * @param mostrar_mensagem_erro
  * @return int
  */
 int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo, bool_t mostrar_mensagem_erro) {
@@ -609,6 +620,8 @@ int ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo, bool_t m
 /**
  * @brief Lê um float compreendido entre os valores especificados
  * @param mensagem
+ * @param minimo
+ * @param maximo
  * @return float
  */
 float ler_float_intervalo(const char* mensagem, float minimo, float maximo) {
@@ -639,15 +652,19 @@ char ler_char(const char* mensagem) {
  * @param output
  * @param tamanho_maximo
  */
-void ler_escola(const char* mensagem, char* output, int tamanho_maximo) {
+void ler_escola(const char* mensagem, char* output) {
     char escola[TAMANHO_MAXIMO_ESCOLA];
-    char* escolas_possiveis[] = {"ESTG", "ESECS", "ESSLEI", "ESAD", "ESTM"};
+    char* escolas_possiveis[5] = {"ESTG", "ESECS", "ESSLEI", "ESAD", "ESTM"};
+
     do {
         ler_string(mensagem, escola, TAMANHO_MAXIMO_ESCOLA);
         string_para_maiusculas(escola);
         if (!vetor_contem_elemento(escolas_possiveis, 5, escola, STRING))
             printf("Escola inválida. Escolas possíveis: ESTG, ESECS, ESSLEI, ESAD, ESTM.\n");
+
     } while (!vetor_contem_elemento(escolas_possiveis, 5, escola, STRING));
+
+    strcpy(output, escola);
 }
 
 /**
@@ -707,7 +724,7 @@ participante_t* ler_participante(estado_programa_t* estado_programa) {
     int  nif, telefone, identificador;
 
     ler_string("Nome do participante: ", nome, TAMANHO_MAXIMO_NOME);
-    ler_escola("Escola do participante: ", escola, TAMANHO_MAXIMO_ESCOLA);
+    ler_escola("Escola do participante: ", escola);
     nif = ler_nif("NIF do participante: ");
     ler_email("Email do participante: ", email);
     telefone = ler_telefone("Telefone do participante: ");
@@ -724,6 +741,8 @@ participante_t* ler_participante(estado_programa_t* estado_programa) {
 codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
     participante_t* participante;
+
+    limpar_ecra();
 
     if (*estado_programa->numero_de_participantes == NUMERO_MAXIMO_DE_PARTICIPANTES) {
         printf("Número máximo de participantes atingido.\n");
@@ -750,6 +769,8 @@ codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
     atividade_t* atividade;
 
+    limpar_ecra();
+
     if (*estado_programa->numero_de_atividades == NUMERO_MAXIMO_DE_ATIVIDAES) {
         printf("Número máximo de atividades atingido.\n");
         esperar_tecla("Pressione qualquer tecla para continuar...");
@@ -774,6 +795,8 @@ codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
 codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
     inscricao_t* inscricao;
+
+    limpar_ecra();
 
     if (*estado_programa->numero_de_inscricoes == NUMERO_MAXIMO_DE_INSCRICOES) {
         printf("Número máximo de inscrições atingido.\n");
@@ -1046,7 +1069,7 @@ bool_t vetor_contem_elemento(void* vetor, int tamanho, void* elemento_procura, t
             break;
         case STRING:
             for (indice = 0; indice < tamanho; indice++)
-                if (strcmp((char*) vetor + indice, (char*) elemento_procura) == 0) encontrado = TRUE;
+                if (strcmp(((char**) vetor)[indice], (char*) elemento_procura) == 0) encontrado = TRUE;
             break;
     } // Sem caso default para que o compilador nos avise de casos não tratados
     return encontrado;
