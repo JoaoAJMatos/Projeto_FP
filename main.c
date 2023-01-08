@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
+#include <locale.h>
 
 // A keyword "inline" parecia causar problemas com o GCC na minha
 // máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
@@ -328,6 +329,8 @@ int main() {
     // Este estado é partilhado entre funções, de modo que possam aceder e consultar o estado atual
     // do programa.
     estado_programa_t* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes, &dados_guardados);
+
+    setlocale(LC_ALL, "Portuguese"); 
 
     if (carregar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
         printf("Erro ao carregar dados do ficheiro \"%s\". A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
@@ -866,6 +869,9 @@ atividade_t* criar_atividade(char* designacao, char* data, char* hora, char* loc
 
 /**
  * @brief Aloca memória para uma inscrição e inicializa os seus campos
+ * 
+ * Os valor pago é atribuído automaticamente com base no valor da atividade
+ * 
  * @param participante
  * @param atividade
  * @param estado_programa
@@ -887,6 +893,7 @@ inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_progr
         inscricao->identificador = *estado_programa->numero_de_inscricoes;
         inscricao->id_participante = id_participante;
         inscricao->id_atividade = id_atividade;
+        inscricao->valor_pago = estado_programa->atividades[indice_procura_atividades]->valor;
 
         // A inscrição tem a data e hora da sua criação
         strcpy(inscricao->data, obter_data_atual());
