@@ -704,9 +704,9 @@ int ler_telefone(const char* mensagem) {
 
     do {
         ler_string(mensagem, telefone, TAMANHO_TELEFONE);
-        if (!strlen(telefone) != TAMANHO_TELEFONE)
+        if (!(strlen(telefone) != TAMANHO_TELEFONE))
             printf("O numero de telemovel deve ter 9 digitos\n");
-    } while (!strlen(telefone) != TAMANHO_TELEFONE);
+    } while (!(strlen(telefone) != TAMANHO_TELEFONE));
 
     return atoi(telefone);
 }
@@ -1012,6 +1012,8 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
 
 inline_ static void mostrar_participantes(estado_programa_t* estado_programa) {
     int indice, numero_participantes = *estado_programa->numero_de_participantes;
+
+    limpar_ecra();
 
     if (numero_participantes == 0) {
         printf("Não existem participantes registados.\n");
