@@ -1002,24 +1002,51 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
 }
 
 inline_ static void mostrar_participantes(estado_programa_t* estado_programa) {
-    int indice;
-    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
-        mostrar_participante(estado_programa->participantes[indice]);
+    int indice, numero_participantes = *estado_programa->numero_de_participantes;
+
+    if (numero_participantes == 0) {
+        printf("Não existem participantes registados.\n");
+    } else {
+        printf("Numero de participantes registados: %d\n", numero_participantes);
+        for (indice = 0; indice < numero_participantes; indice++) {
+            printf("Participante %d:\n", indice + 1);
+            mostrar_participante(estado_programa->participantes[indice]);
+        }
     }
+
+    esperar_tecla("Pressione ENTER para continuar...");
 }
 
 inline_ static void mostrar_atividades(estado_programa_t* estado_programa) {
-    int indice;
-    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
-        mostrar_atividade(estado_programa->atividades[indice]);
+    int indice, numero_atividades = *estado_programa->numero_de_atividades;
+
+    if (numero_atividades == 0) {
+        printf("Não existem atividades registadas.\n");
+    } else {
+        printf("Numero de atividades registadas: %d\n", numero_atividades);
+        for (indice = 0; indice < numero_atividades; indice++) {
+            printf("Atividade %d:\n", indice + 1);
+            mostrar_atividade(estado_programa->atividades[indice]);
+        }
     }
+
+    esperar_tecla("Pressione ENTER para continuar...");
 }
 
 inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa) {
-    int indice;
-    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
-        mostrar_inscricao(estado_programa->inscricoes[indice]);
+    int indice, numero_inscricoes = *estado_programa->numero_de_inscricoes;
+
+    if (numero_inscricoes == 0) {
+        printf("Não existem inscrições registadas.\n");
+    } else {
+        printf("Numero de inscrições registadas: %d\n", numero_inscricoes);
+        for (indice = 0; indice < numero_inscricoes; indice++) {
+            printf("Inscrição %d:\n", indice + 1);
+            mostrar_inscricao(estado_programa->inscricoes[indice]);
+        }
     }
+
+    esperar_tecla("Pressione ENTER para continuar...");
 }
 
 
