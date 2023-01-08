@@ -170,13 +170,13 @@ typedef struct {
  * Desta forma, o estado do programa é acessível a todas as funções que o precisam de manipular ou consultar.
  */
 typedef struct {
-    participante_t** participantes;   // Vetor de participantes
-    atividade_t**    atividades;      // Vetor de atividades
-    inscricao_t**    inscricoes;      // Vetor de inscrições
-    int*           numero_de_participantes;                         // Contadores
-    int*           numero_de_atividades;
-    int*           numero_de_inscricoes;
-    bool_t*        dados_guardados;                                 // Flag para indicar se os dados foram guardados
+    participante_t** participantes;         // Vetor de participantes
+    atividade_t**    atividades;            // Vetor de atividades
+    inscricao_t**    inscricoes;            // Vetor de inscrições
+    int*           numero_de_participantes; // Contadores
+    int*           numero_de_atividades;    //
+    int*           numero_de_inscricoes;    //
+    bool_t*        dados_guardados;         // Flag para indicar se os dados foram guardados
 } estado_programa_t;
 
 /* ========================================================== */
@@ -274,9 +274,18 @@ int timestamp();
 bool_t confirmar_saida(estado_programa_t*);
 bool_t vetor_contem_elemento(void*, int, void*, tipo_primitivo_t);
 bool_t nif_valido(int);
-bool_t email_valido(char*);
+
+bool_t email_parte_local_valida(char*, int, int);     // Para validar as diversas partes do email segundo as definicoes do RFC 5322 e 5321
+bool_t email_parte_dominio_valida(char*, int, int);   //
+bool_t email_valido(char*);                           // Para validar o email como um todo
+
+bool_t ano_bissexto(int);
+inline_ int dias_mes(int, int);
+
 bool_t data_valida(char*);
 bool_t hora_valida(char*);
+
+int posicao_char_na_string(char, char*, int);
 
 /* ========================================================== */
 
@@ -1002,24 +1011,51 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
 }
 
 inline_ static void mostrar_participantes(estado_programa_t* estado_programa) {
-    int indice;
-    for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
-        mostrar_participante(estado_programa->participantes[indice]);
+    int indice, numero_participantes = *estado_programa->numero_de_participantes;
+
+    if (numero_participantes == 0) {
+        printf("Não existem participantes registados.\n");
+    } else {
+        printf("Numero de participantes registados: %d\n", numero_participantes);
+        for (indice = 0; indice < numero_participantes; indice++) {
+            printf("Participante %d:\n", indice + 1);
+            mostrar_participante(estado_programa->participantes[indice]);
+        }
     }
+
+    esperar_tecla("Pressione ENTER para continuar...");
 }
 
 inline_ static void mostrar_atividades(estado_programa_t* estado_programa) {
-    int indice;
-    for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
-        mostrar_atividade(estado_programa->atividades[indice]);
+    int indice, numero_atividades = *estado_programa->numero_de_atividades;
+
+    if (numero_atividades == 0) {
+        printf("Não existem atividades registadas.\n");
+    } else {
+        printf("Numero de atividades registadas: %d\n", numero_atividades);
+        for (indice = 0; indice < numero_atividades; indice++) {
+            printf("Atividade %d:\n", indice + 1);
+            mostrar_atividade(estado_programa->atividades[indice]);
+        }
     }
+
+    esperar_tecla("Pressione ENTER para continuar...");
 }
 
 inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa) {
-    int indice;
-    for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
-        mostrar_inscricao(estado_programa->inscricoes[indice]);
+    int indice, numero_inscricoes = *estado_programa->numero_de_inscricoes;
+
+    if (numero_inscricoes == 0) {
+        printf("Não existem inscrições registadas.\n");
+    } else {
+        printf("Numero de inscrições registadas: %d\n", numero_inscricoes);
+        for (indice = 0; indice < numero_inscricoes; indice++) {
+            printf("Inscrição %d:\n", indice + 1);
+            mostrar_inscricao(estado_programa->inscricoes[indice]);
+        }
     }
+
+    esperar_tecla("Pressione ENTER para continuar...");
 }
 
 
@@ -1140,68 +1176,158 @@ bool_t nif_valido(int nif) {
  * 
  * NOTA: Os TLDs (top level domains) não podem ser apenas números. Os hífens não podem ser o primeiro ou
  *      último caractere de uma label.
+ * 
+ * A implementacao desta verificação poderia ter sido facilitada através do uso de expressões regulares. Porém,
+ * o Windows não tem nenhuma biblioteca nativa para suportar expressões regulares e no projeto não podemos usar
+ * bibliotecas externas. Assim, a implementação foi feita através de uma abordagem mais "manual".
+ * 
+ * NOTA: A funcao nao cobre todos os casos citados nas descricoes dos respetivos RFCs, porem nao deve ser necessaria tanta
+ *       verificacao. Ademais, a versao nao suporta caracteres Unicode.
  *
  * @param mail
  * @return bool_t
  */
 bool_t email_valido(char* mail) {
-    bool_t valido = FALSE;
-    int tamanho = strlen(mail);
-    int indice = 0;
-    int indice_label = 0;
-    int indice_local = 0;
-    int indice_dominio = 0;
-    int indice_tld = 0;
-    int tamanho_local = 0;
-    int tamanho_dominio = 0;
-    int tamanho_tld = 0;
-    char local[64];
-    char dominio[255];
-    char tld[63];
-    bool_t local_valido = FALSE;
-    bool_t dominio_valido = FALSE;
-    bool_t tld_valido = FALSE;
+    bool_t valido = TRUE;
+    int tamanho_email = strlen(mail), posicao_arroba;
 
-    // Verificar se o email tem o tamanho máximo permitido
-    if (tamanho > 254) return FALSE;
-
-    // Verificar se o email tem o formato esperado
-    if (strchr(mail, '@') == NULL) return FALSE;
-
-    // Separar o email em local e domínio
-    while (mail[indice] != '@') {
-        local[indice_local] = mail[indice];
-        indice_local++;
-        indice++;
-    }
-    indice++; // Ignorar o @
-    while (mail[indice] != '\0') {
-        dominio[indice_dominio] = mail[indice];
-        indice_dominio++;
-        indice++;
-    }
-
-    // Verificar se o local do email tem o tamanho máximo permitido
-    if (indice_local > 64) return FALSE;
-
-    // Verificar se o domínio do email tem o tamanho máximo permitido
-    if (indice_dominio > 255) return FALSE;
-
-    // Verificar se o local do email é válido
-    for (int i = 0; i < indice_local; i++) {
-        if (local[i] == '.') {
-            if (i == 0 || i == indice_local - 1) return FALSE;
-            if (local[i + 1] == '.') return FALSE;
+    // Se não tiver o caracter @ o email não é válido
+    posicao_arroba = posicao_char_na_string('@', mail, tamanho_email);
+    if (posicao_arroba == ERRO) valido = FALSE;
+    else {
+        // Se a parte local do email não for válida o email não é válido
+        if (!email_parte_local_valida(mail, tamanho_email, posicao_arroba)) valido = FALSE;
+        else {
+            // Se a parte do domínio do email não for válida o email não é válido
+            if (!email_parte_dominio_valida(mail, tamanho_email, posicao_arroba)) valido = FALSE;
         }
-        if (isalnum(local[i]) || local[i] == '!' || local[i] == '#' || local[i] == '$' || local[i] == '%' || local[i] == '&' || local[i] == '\'' || local[i] == '*' || local[i] == '+' || local[i] == '-' || local[i] == '/' || local[i] == '=' || local[i] == '?' || local[i] == '^' || local[i] == '_' || local[i] == '`' || local[i] == '{' || local[i] == '|' || local[i] == '}' || local[i] == '~') {
-            local_valido = TRUE;
-        } else {
-            local_valido = FALSE;
-            break;
+                    
+    }
+
+    return valido;
+}
+
+/**
+ * @brief Valida a parte local do email segundo as regras do RFC 5322 
+ * 
+ * @param mail 
+ * @param tamanho_email 
+ * @param posicao_arroba 
+ * @return bool_t 
+ */
+bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arroba) {
+    bool_t valido = TRUE;
+    int tamanho_parte_local = posicao_arroba;
+    char caracteres_validos_parte_local[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'*+-/=?^_`{|}~.*";
+    char ponto = '.';
+
+    if (tamanho_parte_local < 1 || tamanho_parte_local > 64) valido = FALSE;        // A parte local do email deve ter entre 1 e 64 caracteres
+    else {
+        if (mail[0] == '.' || mail[tamanho_parte_local - 1] == '.') valido = FALSE; // O '.' não pode ser o primeiro ou último caractere da parte local do email
+        else {
+            // O '.' não pode ser seguido de outro '.'
+            if (vetor_contem_elemento(mail, tamanho_parte_local, &ponto, CHAR)) {
+                if (vetor_contem_elemento(mail + 1, tamanho_parte_local - 1, &ponto, CHAR)) valido = FALSE; 
+            } else {
+                // Verifica se a parte local do email contem apenas caracteres válidos
+                if (!vetor_contem_elemento(mail, tamanho_parte_local, caracteres_validos_parte_local, CHAR)) valido = FALSE;
+            }
         }
     }
 
     return valido;
+}
+
+/**
+ * @brief Valida a parte do domínio do email segundo as regras do RFC 5322
+ * 
+ * @param email 
+ * @param tamanho_email 
+ * @param posicao_arroba 
+ * @return bool_t 
+ */
+bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_arroba) {
+    bool_t valido = TRUE;
+    int tamanho_parte_dominio = tamanho_email - posicao_arroba - 1;
+    char caracteres_validos_parte_dominio[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.";
+    char ponto = '.';
+
+    if (tamanho_parte_dominio < 1 || tamanho_parte_dominio > 255) valido = FALSE; // A parte do domínio do email deve ter entre 1 e 255 caracteres
+    else {
+        // Verifica se a parte do domínio do email contem apenas caracteres válidos
+        if (!vetor_contem_elemento(email + posicao_arroba + 1, tamanho_parte_dominio, caracteres_validos_parte_dominio, CHAR)) valido = FALSE;
+        else {
+            // Verifica se a parte do domínio do email tem pelo menos um ponto
+            if (!vetor_contem_elemento(email + posicao_arroba + 1, tamanho_parte_dominio, &ponto, CHAR)) valido = FALSE;
+            else {
+                // Verifica se a parte do domínio do email tem pelo menos um label com pelo menos 2 caracteres
+                if (!vetor_contem_elemento(email + posicao_arroba + 2, tamanho_parte_dominio - 1, &ponto, CHAR)) valido = FALSE;
+                else {
+                    // Verifica se a parte do domínio do email não tem um ponto no início ou no fim
+                    if (email[posicao_arroba + 1] == '.' || email[tamanho_email - 1] == '.') valido = FALSE;
+                }
+            }
+        }
+    }
+
+    return valido;
+}
+
+
+/**
+ * @brief Verifica se um determinado ano é bissexto
+ * 
+ * @param ano 
+ * @return bool_t 
+ */
+bool_t ano_bissexto(int ano) {
+    bool_t bissexto = FALSE;
+
+    if (ano % 4 == 0) {
+        if (ano % 100 == 0) {
+            if (ano % 400 == 0) bissexto = TRUE;
+        } else bissexto = TRUE;
+    }
+
+    return bissexto;
+}
+
+
+/**
+ * @brief Devolve o numero de dias de um determinado mes de um determinado ano
+ * 
+ * @param mes 
+ * @param ano_bissexto 
+ * @return int 
+ */
+inline_ int dias_mes(int mes, int ano) {
+    int dias[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    if (mes == 2 && ano_bissexto(ano)) dias[1] = 29;
+    return dias[mes - 1];
+}
+
+
+
+/**
+ * @brief Devolve a posicao da primeira ocurrencia de um caracter numa string (ou -1 se nao existir)
+ * 
+ * @param caractere 
+ * @param string 
+ * @param tamanho_string 
+ * @return inline_ 
+ */
+inline_ int posicao_char_na_string(char caractere, char* string, int tamanho_string) {
+    int posicao = -1, indice;
+
+    for (indice = 0; indice < tamanho_string; indice++) {
+        if (string[indice] == caractere) {
+            posicao = indice;
+            break;
+        }
+    }
+
+    return posicao;
 }
 
 /* ========================================================== */
