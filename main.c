@@ -279,6 +279,9 @@ bool_t email_parte_local_valida(char*, int, int);     // Para validar as diversa
 bool_t email_parte_dominio_valida(char*, int, int);   //
 bool_t email_valido(char*);                           // Para validar o email como um todo
 
+bool_t ano_bissexto(int);
+inline_ int dias_mes(int, int);
+
 bool_t data_valida(char*);
 bool_t hora_valida(char*);
 
@@ -1269,6 +1272,41 @@ bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_ar
 
     return valido;
 }
+
+
+/**
+ * @brief Verifica se um determinado ano é bissexto
+ * 
+ * @param ano 
+ * @return bool_t 
+ */
+bool_t ano_bissexto(int ano) {
+    bool_t bissexto = FALSE;
+
+    if (ano % 4 == 0) {
+        if (ano % 100 == 0) {
+            if (ano % 400 == 0) bissexto = TRUE;
+        } else bissexto = TRUE;
+    }
+
+    return bissexto;
+}
+
+
+/**
+ * @brief Devolve o numero de dias de um determinado mes de um determinado ano
+ * 
+ * @param mes 
+ * @param ano_bissexto 
+ * @return int 
+ */
+inline_ int dias_mes(int mes, int ano) {
+    int dias[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    if (mes == 2 && ano_bissexto(ano)) dias[1] = 29;
+    return dias[mes - 1];
+}
+
 
 
 /**
