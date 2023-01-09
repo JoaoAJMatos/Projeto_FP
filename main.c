@@ -341,9 +341,13 @@ int main() {
 
     setlocale(LC_ALL, "Portuguese"); 
 
+#if TESTE
+    inserir_dados_teste(estado_programa);
+#else
     if (carregar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
         printf("Erro ao carregar dados do ficheiro \"%s\". A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
     }
+#endif
 
     /// LOOP PRINCIPAL ///
     do {
@@ -1649,4 +1653,31 @@ void menu_estatisticas(estado_programa_t* estado_programa) {
             break;
         }
     } while (opcao != VOLTAR_MENU_PRINCIPAL_ESTATISTICAS);
+}
+
+
+/* ========================================================== */
+/* =                         TESTE                          = */
+/* ========================================================== */
+
+/**
+ * @brief Funcao que insere dados de teste no estado do programa
+ * 
+ * @param estado_programa 
+ */
+void inserir_dados_teste(estado_programa_t* estado_programa) {
+    // Criar os dados
+    participante_t* participante = criar_participante("Joao", "ESTG", 123456789, "mail@mail.com", 911111111, estado_programa);
+    atividade_t* atividade = criar_atividade("Atividade Teste", "30/04/2023", "9:30", "Aqui", "Desporto", "AE-ESTG", 10, estado_programa);
+    inscricao_t* inscricao = criar_inscricao(0, 0, estado_programa);
+    
+    // Adicionar os dados ao estado do programa
+    estado_programa->participantes[0] = participante;
+    estado_programa->atividades[0] = atividade;
+    estado_programa->inscricoes[0] = inscricao;
+
+    // Incrementar os contadores
+    (*estado_programa->numero_de_participantes)++;
+    (*estado_programa->numero_de_atividades)++;
+    (*estado_programa->numero_de_inscricoes)++;
 }
