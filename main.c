@@ -24,10 +24,10 @@
 #define inline_ inline
 #endif // defined(__aarch64__)
 
-#if defined(_WIN32) || defined(_WIN34)          // Windows
+#if defined(_WIN32) || defined(_WIN34)            // Windows
 #include <io.h>                                 // Para usar a função _access()
-#define F_OK 0                                  // Arquivo existe
-#define access _access                          // Para verificar se um arquivo existe
+#define F_OK 0                                   // Arquivo existe
+#define access _access                           // Para verificar se um arquivo existe
 #else
 #include <unistd.h>                             // Para usar a função access()
 #endif // defined(_WIN32) || defined(_WIN34)
@@ -64,7 +64,7 @@
 #define HORA_FORMATO "%02d:%02d"                // (HH:MM)
 #define HORA_FORMATO_COMPLETO "%02d:%02d:%02d"  // (HH:MM:SS)
 
-#define TESTE 1                         // Flag de teste
+#define TESTE 1                                 // Flag de teste
 
 
 /* ========================================================== */
@@ -134,7 +134,7 @@ typedef enum {                          // Menu de estatísticas
 /* ========================================================== */
 
 typedef struct {
-    int  identificador;                 // Identificador único do participante
+    int  identificador;                  // Identificador único do participante
     char nome[TAMANHO_MAXIMO_NOME];     // Nome do participante
     char escola[TAMANHO_MAXIMO_ESCOLA]; // Escola do participante
     int  nif;                           // NIF do participante
@@ -154,10 +154,10 @@ typedef struct {
 } atividade_t;
 
 typedef struct {
-    int   identificador;        // Identificador único da inscrição
+    int   identificador;         // Identificador único da inscrição
     int   id_participante;      // Identificador do participante
     int   id_atividade;         // Identificador da atividade
-    float valor_pago;           // Valor pago pelo participante
+    float valor_pago;            // Valor pago pelo participante
     char  data[TAMANHO_DATA];   // Data da inscrição
     char  hora[TAMANHO_HORA];   // Hora da inscrição
 } inscricao_t;
@@ -191,6 +191,7 @@ typedef struct {
 /* =                      PROTÓTIPOS                        = */
 /* ========================================================== */
 
+/// @brief Utilitários dos structs
 participante_t* criar_participante(char*, char*, int, char*, int, estado_programa_t*);
 atividade_t* criar_atividade(char*, char*, char*, char*, char*, char*, float, estado_programa_t*);
 inscricao_t* criar_inscricao(int, int, estado_programa_t*);
@@ -213,6 +214,7 @@ inline_ static void mostrar_inscricoes(estado_programa_t*);
 
 /* ========================================================== */
 
+/// @brief Guardar & Carregar dados do ficheiro binário 
 void guardar_participantes(estado_programa_t*, FILE*);
 void guardar_atividades(estado_programa_t*, FILE*);
 void guardar_inscricoes(estado_programa_t*, FILE*);
@@ -228,22 +230,28 @@ codigo_erro_t guardar_dados(const char*, estado_programa_t*);
 
 /* ========================================================== */
 
+/// @brief Utilitários de input 
 void  ler_string(const char*, char*, int);
 int   ler_inteiro_intervalo(const char*, int, int, bool_t);
-float ler_float_intervalo(const char*, float, float);
+float  ler_float_intervalo(const char*, float, float);
 char  ler_char(const char*);
 
 void  ler_escola(const char*, char*);
 void  ler_data(const char*, char*);
-void  ler_hora(const char*, char*);
+void  ler_hora(const char*, char*, char*);
 
 void  ler_email(const char*, char*);
 int   ler_nif(const char*);
 int   ler_telefone(const char*);
 
+void  ler_tipo_atividade(const char*, char*);
+void  ler_associacao_estudantes(const char*, char*);
+int   ler_id_participante(const char*, estado_programa_t*);
+int   ler_id_atividade(const char*, estado_programa_t*);
+
 participante_t* ler_participante(estado_programa_t*);
-atividade_t* ler_atividade(estado_programa_t*) {};
-inscricao_t* ler_inscricao(estado_programa_t*) {};
+atividade_t* ler_atividade(estado_programa_t*);
+inscricao_t* ler_inscricao(estado_programa_t*);
 
 codigo_erro_t inserir_participante(estado_programa_t*);
 codigo_erro_t inserir_atividade(estado_programa_t*);
@@ -268,9 +276,9 @@ int procurar_inscricao_por_id(int, estado_programa_t*);
 
 /* ========================================================== */
 
-char* obter_data_atual();
-char* obter_hora_atual();
-char* obter_hora_atual_com_segundos();
+char* obter_hora_atual_string_string();
+char* obter_hora_atual_string();
+char* obter_hora_atual_string_com_segundos();
 
 /* ========================================================== */
 
@@ -283,7 +291,10 @@ bool_t email_parte_dominio_valida(char*, int, int);   //
 bool_t email_valido(char*);                           // Para validar o email como um todo
 
 bool_t data_valida(char*);
-bool_t hora_valida(char*);
+bool_t dia_mes_valido(int, int, int);
+bool_t hora_minuto_valido(int, int);
+bool_t ano_valido(int, int);
+bool_t hora_valida(char*, char*);
 
 int posicao_char_na_string(char, char*, int);
 
@@ -292,15 +303,13 @@ int posicao_char_na_string(char, char*, int);
 opcao_menu_principal_t menu_principal();
 
 opcao_menu_participantes_t ler_opcao_menu_participantes();
-void menu_participantes(estado_programa_t*);
-
 opcao_menu_atividades_t ler_opcao_menu_atividades();
-void menu_atividades(estado_programa_t*);
-
 opcao_menu_inscricoes_t ler_opcao_menu_inscricoes();
-void menu_inscricoes(estado_programa_t*);
-
 opcao_menu_estatisticas_t ler_opcao_menu_estatisticas();
+
+void menu_participantes(estado_programa_t*);
+void menu_atividades(estado_programa_t*);
+void menu_inscricoes(estado_programa_t*);
 void menu_estatisticas(estado_programa_t*);
 
 /* ========================================================== */
@@ -315,14 +324,23 @@ void inserir_dados_teste(estado_programa_t*);
 
 /* ========================================================== */
 
-char* data_atual();
-int   data_para_timestamp(char*);
-int   data_hora_para_timestamp(char*);
-char* timestamp_para_data(int);
-char* timestamp_para_data_hora(int);
+int   obter_ano_atual();
+int   obter_mes_atual();
+int   obter_dia_atual();
+int   obter_hora_atual();
+int   obter_minuto_atual();
 
 bool_t ano_bissexto(int);
 inline_ int dias_mes(int, int);
+
+/* ========================================================== */
+
+/// @brief Estatísticas
+void mostrar_numero_atividades_por_ae(estado_programa_t*);
+void mostrar_percentagem_inscricoes_por_escola(estado_programa_t*);
+void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t*);
+
+
 
 
 /* ========================================================== */
@@ -714,6 +732,26 @@ void ler_data(const char* mensagem, char* data_output) {
 }
 
 /**
+ * @brief Lê uma data até que a data inserida seja válida
+ * 
+ * @param mensagem 
+ * @param hora_output 
+ */
+void ler_hora(const char* mensagem, char* hora_output, char* data_inserida) {
+    char hora[TAMANHO_HORA];
+    int hora_int, minuto_int;
+
+    do {
+        ler_string(mensagem, hora, TAMANHO_HORA);
+        if (!hora_valida(hora, data_inserida))
+            printf("Hora inválida. Introduza uma hora válida no formato HH:MM.\n");
+    } while (!hora_valida(hora, data_inserida));
+
+    sscanf(hora, "%d:%d", &hora_int, &minuto_int);
+    sprintf(hora_output, HORA_FORMATO, hora_int, minuto_int);
+}
+
+/**
  * @brief Lê um NIF até que o NIF inserido seja válido
  *
  * @warning O NIF deve ser composto por 9 dígitos e deve seguir o algoritmo de validação do NIF
@@ -797,14 +835,31 @@ atividade_t* ler_atividade(estado_programa_t* estado_programa) {
 
     ler_string("Designação da atividade: ", designacao, TAMANHO_MAXIMO_DESIGNACAO);
     ler_data("Data da atividade: ", data);
-    ler_hora("Hora da atividade: ", hora);
+    ler_hora("Hora da atividade: ", hora, data);
     ler_string("Local da atividade: ", local, TAMANHO_MAXIMO_LOCAL);
     ler_tipo_atividade("Tipo da atividade: ", tipo);
     ler_associacao_estudantes("Associacao de estudantes: ", associacao_estudantes);
-    ler_float_intervalo("Valor da atividade: ", &valor, VALOR_MINIMO_ATIVIDADE, VALOR_MAXIMO_ATIVIDADE, FALSE);
+    valor = ler_float_intervalo("Valor da atividade: ", VALOR_MINIMO_ATIVIDADE, VALOR_MAXIMO_ATIVIDADE);
 
     atividade = criar_atividade(designacao, data, hora, local, tipo, associacao_estudantes, valor, estado_programa);
     return atividade;
+}
+
+/**
+ * @brief Lê os dados para a criação de uma inscrição e guarda-os na estrutura
+ * 
+ * @param estado_programa 
+ * @return inscricao_t* 
+ */
+inscricao_t* ler_inscricao(estado_programa_t* estado_programa) {
+    inscricao_t* inscricao;
+    int id_atividade, id_participante;
+
+    id_participante = ler_id_participante("Insira o ID do participante", estado_programa);
+    id_atividade = ler_id_atividade("Insira o ID da atividade", estado_programa);
+
+    inscricao = criar_inscricao(id_participante, id_atividade, estado_programa);
+    return inscricao;
 }
 
 /**
@@ -968,8 +1023,8 @@ inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_progr
         inscricao->valor_pago = estado_programa->atividades[indice_procura_atividades]->valor;
 
         // A inscrição tem a data e hora da sua criação
-        strcpy(inscricao->data, obter_data_atual());
-        strcpy(inscricao->hora, obter_hora_atual_com_segundos());
+        strcpy(inscricao->data, obter_hora_atual_string_string());
+        strcpy(inscricao->hora, obter_hora_atual_string_com_segundos());
     }
 
     return inscricao;
@@ -1381,21 +1436,117 @@ inline_ int dias_mes(int mes, int ano) {
 bool_t data_valida(char* data) {
     bool_t valida = TRUE;
     int dia = atoi(data + 0), mes = atoi(data + 3), ano = atoi(data + 6);
-    int timestamp_data  = data_para_timestamp(data), timestamp_atual = data_para_timestamp(obter_data_atual());
+    int dia_atual = obter_dia_atual(), mes_atual = obter_mes_atual(), ano_atual = obter_ano_atual();
 
-    // A data não pode ser anterior à data atual
-    if (timestamp_data < timestamp_atual) {
-        valida = FALSE;
-        printf("A data não pode ser anterior à data atual (%s).", timestamp_para_data(timestamp_atual));
-    }
-    else {
-        if (dias_mes(mes, ano) < dia) {
-            printf("O mês %d não tem %d dias.", mes, dia);
+    if (ano == ano_atual) {
+        if (mes < mes_atual) {
+            printf("O mês %d não pode ser anterior ao mês atual (%d).", mes, mes_atual);
             valida = FALSE;
+        }
+        else {
+            if (dia < dia_atual) {
+                printf("O dia %d não pode ser anterior ao dia atual (%d).", dia, dia_atual);
+                valida = FALSE;
+            }
         }
     }
 
+    if (!dia_mes_valido(dia, mes, ano)) valida = FALSE;
+    else if (!ano_valido(ano, ano_atual)) valida = FALSE;
     return valida;
+}
+
+/**
+ * @brief Valida os dias inseridos para o mes
+ * 
+ * @param dia 
+ * @param mes 
+ * @param ano 
+ * @return bool_t 
+ */
+bool_t dia_mes_valido(int dia, int mes, int ano) {
+    bool_t valido = TRUE;
+    int num_dias_mes = dias_mes(mes, ano);
+
+    if (dia < 1 || dia > num_dias_mes) {
+        printf("O dia %d não é válido para o mês %d do ano %d.", dia, mes, ano);
+        valido = FALSE;
+    }
+    else {
+        if (mes < 1 || mes > 12) {
+            printf("O mês %d não é válido.", mes);
+            valido = FALSE;
+        }
+    }
+
+    return valido;
+}
+
+/**
+ * @brief Valida o ano inserido
+ * 
+ * @param ano 
+ * @param ano_atual 
+ * @return bool_t 
+ */
+bool_t ano_valido(int ano, int ano_atual) {
+    bool_t valido = TRUE;
+
+    if (ano < ano_atual) {
+        printf("O ano %d não pode ser anterior ao ano atual (%d).", ano, ano_atual);
+        valido = FALSE;
+    }
+
+    return valido;
+}
+
+/**
+ * @brief Verifica se uma determinada hora inserida é válida
+ * 
+ * @param data 
+ * @return bool_t 
+ */
+bool_t hora_valida(char* hora, char* data_inserida) {
+    int hora_inserida = atoi(hora), minuto_inserido = atoi(hora + 3);
+    int hora_atual = obter_hora_atual(), minuto_atual = obter_minuto_atual();
+    int dia_inserido = atoi(data_inserida), mes_inserido = atoi(data_inserida + 3), ano_inserido = atoi(data_inserida + 6);
+    int dia_atual = obter_dia_atual(), mes_atual = obter_mes_atual(), ano_atual = obter_ano_atual();
+    bool_t valido = TRUE;
+
+    if (ano_inserido == ano_atual && mes_inserido == mes_atual && dia_inserido == dia_atual) {
+        if (hora_inserida < hora_atual) {
+            printf("A hora %d não pode ser anterior à hora atual (%d).", hora_inserida, hora_atual);
+            valido = FALSE;
+        }
+
+        if (hora_inserida == hora_atual) {
+            if (minuto_inserido < minuto_atual) {
+                printf("O minuto %d não pode ser anterior ao minuto atual (%d).", minuto_inserido, minuto_atual);
+                valido = FALSE;
+            }
+        }
+    }
+
+    if (!hora_minuto_valido(hora_inserida, minuto_inserido)) valido = FALSE;
+    return valido;
+}
+
+
+bool_t hora_minuto_valido(int hora, int minuto) {
+    bool_t valido = TRUE;
+
+    if (hora < 0 || hora > 23) {
+        printf("A hora %d não é válida. A hora tem que estar entre 0 e 23", hora);
+        valido = FALSE;
+    }
+    else {
+        if (minuto < 0 || minuto > 59) {
+            printf("O minuto %d não é válido. O minuto tem que estar entre 0 e 59", minuto);
+            valido = FALSE;
+        }
+    }
+
+    return valido;
 }
 
 
@@ -1408,7 +1559,7 @@ bool_t data_valida(char* data) {
  * @return inline_ 
  */
 inline_ int posicao_char_na_string(char caractere, char* string, int tamanho_string) {
-    int posicao = -1, indice;
+    int posicao = ERRO, indice;
 
     for (indice = 0; indice < tamanho_string; indice++) {
         if (string[indice] == caractere) {
@@ -1428,7 +1579,7 @@ inline_ int posicao_char_na_string(char caractere, char* string, int tamanho_str
  * @brief Função que retorna a data atual no formato definido na constante DATA_FORMATO
  * @return
  */
-char* obter_data_atual() {
+char* obter_hora_atual_string_string() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     char* data_atual = (char*) malloc(sizeof(char) * 11);
@@ -1440,12 +1591,42 @@ char* obter_data_atual() {
  * @brief Função que retorna a hora atual no formato definido na constante HORA_FORMATO_COMPLETO
  * @return
  */
-char* obter_hora_atual_com_segundos() {
+char* obter_hora_atual_string_com_segundos() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     char* hora_atual = (char*) malloc(sizeof(char) * 9);
     sprintf(hora_atual, HORA_FORMATO_COMPLETO, data->tm_hour, data->tm_min, data->tm_sec);
     return hora_atual;
+}
+
+int obter_ano_atual() {
+    time_t tempo = time(NULL);
+    struct tm* data = localtime(&tempo);
+    return data->tm_year + 1900;
+}
+
+int obter_mes_atual() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    return tm.tm_mon + 1;
+}
+
+int obter_dia_atual() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    return tm.tm_mday;
+}
+
+int obter_hora_atual() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    return tm.tm_hour;
+}
+
+int obter_minuto_atual() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    return tm.tm_min;
 }
 
 /* ========================================================== */
@@ -1550,7 +1731,6 @@ opcao_menu_principal_t menu_principal() {
     return (opcao_menu_principal_t) opcao;
 }
 
-// TODO: Criar uma funcao mais generica para ler opcoes de menus
 opcao_menu_participantes_t ler_opcao_menu_participantes() {
     int opcao;
 
