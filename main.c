@@ -7,6 +7,8 @@
  * @copyright Copyright (c) 2022
  */
 
+// TODO: Criar um membro do struct que indica o ultimo código de erro e a sua mensagem
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -55,6 +57,8 @@
 #define TAMANHO_DATA 11
 #define TAMANHO_HORA 6
 #define TAMANHO_TELEFONE 9
+#define VALOR_MINIMO_ATIVIDADE 0
+#define VALOR_MAXIMO_ATIVIDADE 100
 
 #define DATA_FORMATO "%02d/%02d/%04d"           // (DD/MM/AAAA)
 #define HORA_FORMATO "%02d:%02d"                // (HH:MM)
@@ -267,7 +271,6 @@ int procurar_inscricao_por_id(int, estado_programa_t*);
 char* obter_data_atual();
 char* obter_hora_atual();
 char* obter_hora_atual_com_segundos();
-int timestamp();
 
 /* ========================================================== */
 
@@ -278,9 +281,6 @@ bool_t nif_valido(int);
 bool_t email_parte_local_valida(char*, int, int);     // Para validar as diversas partes do email segundo as definicoes do RFC 5322 e 5321
 bool_t email_parte_dominio_valida(char*, int, int);   //
 bool_t email_valido(char*);                           // Para validar o email como um todo
-
-bool_t ano_bissexto(int);
-inline_ int dias_mes(int, int);
 
 bool_t data_valida(char*);
 bool_t hora_valida(char*);
@@ -313,6 +313,16 @@ void esperar_tecla(const char*);
 
 void inserir_dados_teste(estado_programa_t*);
 
+/* ========================================================== */
+
+char* data_atual();
+int   data_para_timestamp(char*);
+int   data_hora_para_timestamp(char*);
+char* timestamp_para_data(int);
+char* timestamp_para_data_hora(int);
+
+bool_t ano_bissexto(int);
+inline_ int dias_mes(int, int);
 
 
 /* ========================================================== */
@@ -341,9 +351,13 @@ int main() {
 
     setlocale(LC_ALL, "Portuguese"); 
 
+#if TESTE
+    inserir_dados_teste(estado_programa);
+#else
     if (carregar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
         printf("Erro ao carregar dados do ficheiro \"%s\". A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
     }
+#endif
 
     /// LOOP PRINCIPAL ///
     do {
@@ -680,6 +694,26 @@ void ler_escola(const char* mensagem, char* output) {
 }
 
 /**
+ * @brief Lê uma data até que a data inserida seja válida
+ * 
+ * @param mensagem 
+ * @param data_output 
+ */
+void ler_data(const char* mensagem, char* data_output) {
+    char data[TAMANHO_DATA];
+    int dia, mes, ano;
+
+    do {
+        ler_string(mensagem, data, TAMANHO_DATA);
+        if (!data_valida(data))
+            printf("Data inválida. Introduza uma data válida no formato DD/MM/AAAA.\n");
+    } while (!data_valida(data));
+
+    sscanf(data, "%d/%d/%d", &dia, &mes, &ano);
+    sprintf(data_output, DATA_FORMATO, dia, mes, ano);
+}
+
+/**
  * @brief Lê um NIF até que o NIF inserido seja válido
  *
  * @warning O NIF deve ser composto por 9 dígitos e deve seguir o algoritmo de validação do NIF
@@ -746,6 +780,34 @@ participante_t* ler_participante(estado_programa_t* estado_programa) {
 }
 
 /**
+ * @brief Lê os dados para a criação de uma atividade e guarda-os na estrutura
+ * 
+ * @param estado_programa 
+ * @return atividade_t* 
+ */
+atividade_t* ler_atividade(estado_programa_t* estado_programa) {
+    atividade_t* atividade = NULL;
+    char designacao[TAMANHO_MAXIMO_DESIGNACAO];
+    char local[TAMANHO_MAXIMO_LOCAL];
+    char data[TAMANHO_DATA];
+    char hora[TAMANHO_HORA];
+    char tipo[TAMANHO_MAXIMO_TIPO_ATIVIDADE];
+    char associacao_estudantes[TAMANHO_MAXIMO_AE];
+    float valor;
+
+    ler_string("Designação da atividade: ", designacao, TAMANHO_MAXIMO_DESIGNACAO);
+    ler_data("Data da atividade: ", data);
+    ler_hora("Hora da atividade: ", hora);
+    ler_string("Local da atividade: ", local, TAMANHO_MAXIMO_LOCAL);
+    ler_tipo_atividade("Tipo da atividade: ", tipo);
+    ler_associacao_estudantes("Associacao de estudantes: ", associacao_estudantes);
+    ler_float_intervalo("Valor da atividade: ", &valor, VALOR_MINIMO_ATIVIDADE, VALOR_MAXIMO_ATIVIDADE, FALSE);
+
+    atividade = criar_atividade(designacao, data, hora, local, tipo, associacao_estudantes, valor, estado_programa);
+    return atividade;
+}
+
+/**
  * @brief Insere um participante no vetor de participantes
  * @param estado_programa
  * @return codigo_erro_t
@@ -765,6 +827,7 @@ codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
         if (participante != NULL) {
             estado_programa->participantes[*estado_programa->numero_de_participantes] = participante;
             (*estado_programa->numero_de_participantes)++;
+            *estado_programa->dados_guardados = FALSE;
             resultado = OK;
         }
     }
@@ -1309,6 +1372,31 @@ inline_ int dias_mes(int mes, int ano) {
     return dias[mes - 1];
 }
 
+/**
+ * @brief Verifica se uma determinada data inserida é válida
+ * 
+ * @param data 
+ * @return bool_t 
+ */
+bool_t data_valida(char* data) {
+    bool_t valida = TRUE;
+    int dia = atoi(data + 0), mes = atoi(data + 3), ano = atoi(data + 6);
+    int timestamp_data  = data_para_timestamp(data), timestamp_atual = data_para_timestamp(obter_data_atual());
+
+    // A data não pode ser anterior à data atual
+    if (timestamp_data < timestamp_atual) {
+        valida = FALSE;
+        printf("A data não pode ser anterior à data atual (%s).", timestamp_para_data(timestamp_atual));
+    }
+    else {
+        if (dias_mes(mes, ano) < dia) {
+            printf("O mês %d não tem %d dias.", mes, dia);
+            valida = FALSE;
+        }
+    }
+
+    return valida;
+}
 
 
 /**
@@ -1649,4 +1737,77 @@ void menu_estatisticas(estado_programa_t* estado_programa) {
             break;
         }
     } while (opcao != VOLTAR_MENU_PRINCIPAL_ESTATISTICAS);
+}
+
+
+/* ========================================================== */
+/* =                         TESTE                          = */
+/* ========================================================== */
+
+/**
+ * @brief Funcao que insere dados de teste no estado do programa
+ * 
+ * @param estado_programa 
+ */
+void inserir_dados_teste(estado_programa_t* estado_programa) {
+    // Criar os dados
+    participante_t* participante = criar_participante("Joao", "ESTG", 123456789, "mail@mail.com", 911111111, estado_programa);
+    atividade_t* atividade = criar_atividade("Atividade Teste", "30/04/2023", "9:30", "Aqui", "Desporto", "AE-ESTG", 10, estado_programa);
+    inscricao_t* inscricao = NULL;
+    
+    // Adicionar os dados ao estado do programa
+    estado_programa->participantes[0] = participante;
+    estado_programa->atividades[0] = atividade;
+
+    // Só podemos criar a inscricao depois de inserir os dados no vetor
+    // Para que os mesmos sejam passiveis de ser acedidos pela função
+    // de criação de inscrição através do estado do programa
+    inscricao = criar_inscricao(0, 0, estado_programa);
+    estado_programa->inscricoes[0] = inscricao;
+
+    (*estado_programa->numero_de_participantes)++;
+    (*estado_programa->numero_de_atividades)++;
+    (*estado_programa->numero_de_inscricoes)++;
+}
+
+/* ========================================================== */
+
+/**
+ * @brief Devolve uma string com a data atual
+ * 
+ * @return char* 
+ */
+char* data_atual() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    char* data = malloc(sizeof(char) * 11);
+    sprintf(data, DATA_FORMATO, tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+    return data;
+}
+
+/**
+ * @brief Converte uma data para uma timestamp
+ * 
+ * @param data 
+ * @return int 
+ */
+int data_para_timestamp(char* data) {
+    int dia, mes, ano;
+    sscanf(data, DATA_FORMATO, &dia, &mes, &ano);
+    return dia + mes * 30 + ano * 365;
+}
+
+/**
+ * @brief Devolve 
+ * 
+ * @param timestamp 
+ * @return char* 
+ */
+char* timestamp_para_data(int timestamp) {
+    int dia = timestamp % 30;
+    int mes = (timestamp / 30) % 12;
+    int ano = timestamp / 365;
+    char* data = malloc(sizeof(char) * 11);
+    sprintf(data, DATA_FORMATO, dia, mes, ano);
+    return data;
 }
