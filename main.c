@@ -8,7 +8,6 @@
  */
 
 // TODO: Criar um membro do struct que indica o ultimo código de erro e a sua mensagem
-// TODO: Resolver os problemas no processo de guardar & carregar dados do ficheiro
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,7 +180,7 @@ typedef struct {
     int*           numero_de_participantes; // Contadores
     int*           numero_de_atividades;    //
     int*           numero_de_inscricoes;    //
-    bool_t*        dados_guardados;         // Flag para indicar se os dados foram guardados
+    bool_t         dados_guardados;         // Flag para indicar se os dados foram guardados
 } estado_programa_t;
 
 /* ========================================================== */
@@ -196,7 +195,7 @@ typedef struct {
 participante_t* criar_participante(char*, char*, int, char*, int, estado_programa_t*);
 atividade_t* criar_atividade(char*, char*, char*, char*, char*, char*, float, estado_programa_t*);
 inscricao_t* criar_inscricao(int, int, estado_programa_t*);
-estado_programa_t* criar_estado_programa(participante_t**, atividade_t**, inscricao_t**, int*, int*, int*, bool_t*);
+estado_programa_t* criar_estado_programa(participante_t**, atividade_t**, inscricao_t**, int*, int*, int*);
 
 void libertar_participante(participante_t*);
 void libertar_atividade(atividade_t*);
@@ -209,9 +208,9 @@ inline_ static void mostrar_atividade(atividade_t*);
 inline_ static void mostrar_inscricao(inscricao_t*);
 inline_ static void mostrar_estado_programa(estado_programa_t*);
 
-inline_ static void mostrar_participantes(estado_programa_t*);
-inline_ static void mostrar_atividades(estado_programa_t*);
-inline_ static void mostrar_inscricoes(estado_programa_t*);
+inline_ static void mostrar_participantes(estado_programa_t*, bool_t);
+inline_ static void mostrar_atividades(estado_programa_t*, bool_t);
+inline_ static void mostrar_inscricoes(estado_programa_t*, bool_t);
 
 /* ========================================================== */
 
@@ -356,8 +355,7 @@ int main() {
 
     participante_t* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
     atividade_t*    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
-    inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
-    bool_t          dados_guardados = TRUE;                 
+    inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];                
     bool_t          sair = FALSE;
     opcao_menu_principal_t opcao_menu;
 
@@ -366,7 +364,7 @@ int main() {
     //
     // Este estado é partilhado entre funções, de modo que possam aceder e consultar o estado atual
     // do programa.
-    estado_programa_t* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes, &dados_guardados);
+    estado_programa_t* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes);
 
     setlocale(LC_ALL, "Portuguese"); 
 
@@ -377,7 +375,6 @@ int main() {
         printf("Erro ao carregar dados do ficheiro \"%s\". A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
         esperar_tecla("Pressione qualquer tecla para continuar...");
     }
-    mostrar_estado_programa(estado_programa);
 #endif
 
     /// LOOP PRINCIPAL ///
@@ -398,12 +395,12 @@ int main() {
                 menu_estatisticas(estado_programa);
                 break;
             case SALVAR:
-                if (dados_guardados == FALSE) {
+                if (estado_programa->dados_guardados == FALSE) {
                     if (guardar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
                         printf("Erro ao guardar dados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
                     } else {
                         printf("Dados guardados com sucesso no ficheiro \"%s\".\n", FICHEIRO_SAVE);
-                        dados_guardados = TRUE;
+                        estado_programa->dados_guardados = TRUE;
                     }
                 } else {    // Se os dados já tiverem sido guardados
                     printf("Os dados já se encontram guardados no ficheiro \"%s\".\n", FICHEIRO_SAVE);
@@ -570,7 +567,6 @@ codigo_erro_t guardar_estado_programa(const char* caminho, estado_programa_t* es
         guardar_atividades(estado_programa, ficheiro);
         guardar_participantes(estado_programa, ficheiro);
         guardar_inscricoes(estado_programa, ficheiro);
-        fwrite(estado_programa->dados_guardados, sizeof(int), 1, ficheiro);
         fclose(ficheiro);
     }
 
@@ -594,8 +590,7 @@ estado_programa_t* carregar_estado_programa(const char* caminho) {
         carregar_atividades(estado_programa, ficheiro);
         carregar_participantes(estado_programa, ficheiro);
         carregar_inscricoes(estado_programa, ficheiro);
-        estado_programa->dados_guardados = malloc(sizeof(int));
-        fread(estado_programa->dados_guardados, sizeof(int), 1, ficheiro);
+        estado_programa->dados_guardados = TRUE;
         fclose(ficheiro);
     }
 
@@ -924,8 +919,8 @@ inscricao_t* ler_inscricao(estado_programa_t* estado_programa) {
     inscricao_t* inscricao;
     int id_atividade, id_participante;
 
-    id_participante = ler_id_participante("Insira o ID do participante", estado_programa);
-    id_atividade = ler_id_atividade("Insira o ID da atividade", estado_programa);
+    id_participante = ler_id_participante("Insira o ID do participante: ", estado_programa);
+    id_atividade = ler_id_atividade("Insira o ID da atividade: ", estado_programa);
 
     inscricao = criar_inscricao(id_participante, id_atividade, estado_programa);
     return inscricao;
@@ -951,7 +946,7 @@ codigo_erro_t inserir_participante(estado_programa_t* estado_programa) {
         if (participante != NULL) {
             estado_programa->participantes[*estado_programa->numero_de_participantes] = participante;
             (*estado_programa->numero_de_participantes)++;
-            *estado_programa->dados_guardados = FALSE;
+            estado_programa->dados_guardados = FALSE;
             resultado = OK;
         }
     }
@@ -979,7 +974,7 @@ codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
         if (atividade != NULL) {
             estado_programa->atividades[*estado_programa->numero_de_atividades] = atividade;
             (*estado_programa->numero_de_atividades)++;
-            *estado_programa->dados_guardados = FALSE;
+            estado_programa->dados_guardados = FALSE;
             resultado = OK;
         }
     }
@@ -1007,7 +1002,7 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
         if (inscricao != NULL) {
             estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
             (*estado_programa->numero_de_inscricoes)++;
-            *estado_programa->dados_guardados = FALSE;
+            estado_programa->dados_guardados = FALSE;
             resultado = OK;
         }
     }
@@ -1114,7 +1109,7 @@ inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_progr
  */
 estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, atividade_t** vetor_atividades,
                                          inscricao_t** vetor_inscricoes, int* contador_participantes,
-                                         int* contador_atividades, int* contador_inscricoes, bool_t* programa_salvo)
+                                         int* contador_atividades, int* contador_inscricoes)
 {
     estado_programa_t* estado_programa = (estado_programa_t*) malloc(sizeof(estado_programa_t));
     estado_programa->participantes = vetor_participantes;
@@ -1123,7 +1118,7 @@ estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, a
     estado_programa->numero_de_participantes = contador_participantes;
     estado_programa->numero_de_atividades = contador_atividades;
     estado_programa->numero_de_inscricoes = contador_inscricoes;
-    estado_programa->dados_guardados = programa_salvo;
+    estado_programa->dados_guardados = TRUE;
     return estado_programa;
 }
 
@@ -1155,15 +1150,15 @@ inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) 
     int indice;
     
     printf("Participantes:\n");
-    mostrar_participantes(estado_programa);
+    mostrar_participantes(estado_programa, FALSE);
 
     printf("Atividades:\n");
-    mostrar_atividades(estado_programa);
+    mostrar_atividades(estado_programa, FALSE);
 
     printf("Inscrições:\n");
-    mostrar_inscricoes(estado_programa);
+    mostrar_inscricoes(estado_programa, FALSE);
 
-    printf("Dados guardados: %s\n", *estado_programa->dados_guardados ? "Sim" : "Não");
+    printf("Dados guardados: %s\n", estado_programa->dados_guardados ? "Sim" : "Não");
 
     printf("Número de participantes: %d (%d restantes)\n", *estado_programa->numero_de_participantes, NUMERO_MAXIMO_DE_PARTICIPANTES - *estado_programa->numero_de_participantes);
     printf("Número de atividades: %d (%d restantes)\n", *estado_programa->numero_de_atividades, NUMERO_MAXIMO_DE_ATIVIDAES - *estado_programa->numero_de_atividades);
@@ -1199,7 +1194,7 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Hora: %s\n", inscricao->hora);
 }
 
-inline_ static void mostrar_participantes(estado_programa_t* estado_programa) {
+inline_ static void mostrar_participantes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_participantes = *estado_programa->numero_de_participantes;
 
     limpar_ecra();
@@ -1214,10 +1209,10 @@ inline_ static void mostrar_participantes(estado_programa_t* estado_programa) {
         }
     }
 
-    esperar_tecla("Pressione ENTER para continuar...");
+    if (esperar_tecla_utilizador) esperar_tecla("Pressione ENTER para continuar...");
 }
 
-inline_ static void mostrar_atividades(estado_programa_t* estado_programa) {
+inline_ static void mostrar_atividades(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_atividades = *estado_programa->numero_de_atividades;
 
     if (numero_atividades == 0) {
@@ -1230,10 +1225,10 @@ inline_ static void mostrar_atividades(estado_programa_t* estado_programa) {
         }
     }
 
-    esperar_tecla("Pressione ENTER para continuar...");
+    if (esperar_tecla_utilizador) esperar_tecla("Pressione ENTER para continuar...");
 }
 
-inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa) {
+inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_inscricoes = *estado_programa->numero_de_inscricoes;
 
     if (numero_inscricoes == 0) {
@@ -1246,7 +1241,7 @@ inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa) {
         }
     }
 
-    esperar_tecla("Pressione ENTER para continuar...");
+    if (esperar_tecla_utilizador) esperar_tecla("Pressione ENTER para continuar...");
 }
 
 
@@ -1264,8 +1259,8 @@ bool_t confirmar_saida(estado_programa_t* estado_programa) {
     char mensagem[100];
 
     // Definir a mensagem consoante o estado do programa
-    *estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ")
-                                      : strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ");
+    estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ")
+                                    : strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ");
 
     do {
         confirmacao = ler_char(mensagem);
@@ -1912,7 +1907,7 @@ void menu_participantes(estado_programa_t* estado_programa) {
             inserir_participante(estado_programa);
             break;
         case LISTAR_PARTICIPANTES:
-            mostrar_participantes(estado_programa);
+            mostrar_participantes(estado_programa, TRUE);
             break;
         case VOLTAR_MENU_PRINCIPAL_PARTICIPANTES:
             break;
@@ -1937,7 +1932,7 @@ void menu_atividades(estado_programa_t* estado_programa) {
             inserir_atividade(estado_programa);
             break;
         case LISTAR_ATIVIDADES:
-            mostrar_atividades(estado_programa);
+            mostrar_atividades(estado_programa, TRUE);
             break;
         case VOLTAR_MENU_PRINCIPAL_ATIVIDADES:
             break;
@@ -1962,7 +1957,7 @@ void menu_inscricoes(estado_programa_t* estado_programa) {
             inserir_inscricao(estado_programa);
             break;
         case LISTAR_INSCRICOES:
-            mostrar_inscricoes(estado_programa);
+            mostrar_inscricoes(estado_programa, TRUE);
             break;
         case VOLTAR_MENU_PRINCIPAL_INSCRICOES:
             break;
@@ -2061,4 +2056,12 @@ char* timestamp_para_data(int timestamp) {
     char* data = malloc(sizeof(char) * 11);
     sprintf(data, DATA_FORMATO, dia, mes, ano);
     return data;
+}
+
+/* ========================================================== */
+/* =                     ESTATÍSTICAS                       = */
+/* ========================================================== */
+
+void mostrar_numero_atividades_por_ae(estado_programa_t* estado_programa_t) {
+
 }
