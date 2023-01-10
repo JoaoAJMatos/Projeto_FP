@@ -8,6 +8,7 @@
  */
 
 // TODO: Criar um membro do struct que indica o ultimo código de erro e a sua mensagem
+// TODO: Resolver os problemas no processo de guardar & carregar dados do ficheiro
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,7 +65,7 @@
 #define HORA_FORMATO "%02d:%02d"                // (HH:MM)
 #define HORA_FORMATO_COMPLETO "%02d:%02d:%02d"  // (HH:MM:SS)
 
-#define TESTE 1                                 // Flag de teste
+#define TESTE 0                                 // Flag de teste
 
 
 /* ========================================================== */
@@ -356,8 +357,8 @@ int main() {
     participante_t* participantes[NUMERO_MAXIMO_DE_PARTICIPANTES];
     atividade_t*    atividades[NUMERO_MAXIMO_DE_ATIVIDAES];
     inscricao_t*    inscricoes[NUMERO_MAXIMO_DE_INSCRICOES];
-    bool_t         dados_guardados = TRUE;                 
-    bool_t         sair = FALSE;
+    bool_t          dados_guardados = TRUE;                 
+    bool_t          sair = FALSE;
     opcao_menu_principal_t opcao_menu;
 
     /// ESTADO DO PROGRAMA  ///
@@ -374,7 +375,9 @@ int main() {
 #else
     if (carregar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
         printf("Erro ao carregar dados do ficheiro \"%s\". A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
+        esperar_tecla("Pressione qualquer tecla para continuar...");
     }
+    mostrar_estado_programa(estado_programa);
 #endif
 
     /// LOOP PRINCIPAL ///
@@ -454,7 +457,7 @@ void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
 
     // Guardar os participantes
     for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
-        fwrite(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
+        fwrite(estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
@@ -463,7 +466,7 @@ void guardar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
  * @param estado_programa
  * @param ficheiro
  * @return void
- */
+ */ 
 void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Guardar o número de atividades inseridas
     int indice;
@@ -471,7 +474,7 @@ void guardar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
 
     // Guardar as atividades
     for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
-        fwrite(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
+        fwrite(estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
@@ -488,7 +491,7 @@ void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
 
     // Guardar as inscrições
     for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
-        fwrite(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
+        fwrite(estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
@@ -501,11 +504,13 @@ void guardar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
 void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de participantes inseridos
     int indice;
-    fread(*&estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
+    estado_programa->numero_de_participantes = malloc(sizeof(int));
+    fread(estado_programa->numero_de_participantes, sizeof(int), 1, ficheiro);
 
     // Carregar os participantes
     for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
-        fread(&estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
+        estado_programa->participantes[indice] = malloc(sizeof(participante_t));
+        fread(estado_programa->participantes[indice], sizeof(participante_t), 1, ficheiro);
     }
 }
 
@@ -518,11 +523,13 @@ void carregar_participantes(estado_programa_t* estado_programa, FILE* ficheiro) 
 void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de atividades inseridas
     int indice;
-    fread(*&estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
+    estado_programa->numero_de_atividades = malloc(sizeof(int));
+    fread(estado_programa->numero_de_atividades, sizeof(int), 1, ficheiro);
 
     // Carregar as atividades
     for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
-        fread(&estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
+        estado_programa->atividades[indice] = malloc(sizeof(atividade_t));
+        fread(estado_programa->atividades[indice], sizeof(atividade_t), 1, ficheiro);
     }
 }
 
@@ -535,11 +542,13 @@ void carregar_atividades(estado_programa_t* estado_programa, FILE* ficheiro) {
 void carregar_inscricoes(estado_programa_t* estado_programa, FILE* ficheiro) {
     // Carregar o número de inscrições inseridas
     int indice;
-    fread(*&estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
+    estado_programa->numero_de_inscricoes = malloc(sizeof(int));
+    fread(estado_programa->numero_de_inscricoes, sizeof(int), 1, ficheiro);
 
     // Carregar as inscrições
     for (indice= 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
-        fread(&estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
+        estado_programa->inscricoes[indice] = malloc(sizeof(inscricao_t));
+        fread(estado_programa->inscricoes[indice], sizeof(inscricao_t), 1, ficheiro);
     }
 }
 
@@ -557,12 +566,14 @@ codigo_erro_t guardar_estado_programa(const char* caminho, estado_programa_t* es
     codigo_erro_t codigo_erro = OK;
     FILE* ficheiro = fopen(caminho, ESCRITA_BINARIA);
     if (ficheiro == NULL) codigo_erro = ERRO;
+    else {
+        guardar_atividades(estado_programa, ficheiro);
+        guardar_participantes(estado_programa, ficheiro);
+        guardar_inscricoes(estado_programa, ficheiro);
+        fwrite(estado_programa->dados_guardados, sizeof(int), 1, ficheiro);
+        fclose(ficheiro);
+    }
 
-    guardar_participantes(estado_programa, ficheiro);
-    guardar_atividades(estado_programa, ficheiro);
-    guardar_inscricoes(estado_programa, ficheiro);
-
-    fclose(ficheiro);
     return codigo_erro;
 }
 
@@ -572,15 +583,19 @@ codigo_erro_t guardar_estado_programa(const char* caminho, estado_programa_t* es
  * @return estado_programa_t*
  */
 estado_programa_t* carregar_estado_programa(const char* caminho) {
-    estado_programa_t* estado_programa = NULL;
+    estado_programa_t* estado_programa = malloc(sizeof(estado_programa_t));
+    estado_programa->participantes = malloc(sizeof(participante_t*));
+    estado_programa->atividades = malloc(sizeof(atividade_t*));
+    estado_programa->inscricoes = malloc(sizeof(inscricao_t*));
+
     FILE* ficheiro = fopen(caminho, LEITURA_BINARIA);
 
     if (ficheiro != NULL) {
-        estado_programa = (estado_programa_t*) malloc(sizeof(estado_programa_t));
-        carregar_participantes(estado_programa, ficheiro);
         carregar_atividades(estado_programa, ficheiro);
+        carregar_participantes(estado_programa, ficheiro);
         carregar_inscricoes(estado_programa, ficheiro);
-
+        estado_programa->dados_guardados = malloc(sizeof(int));
+        fread(estado_programa->dados_guardados, sizeof(int), 1, ficheiro);
         fclose(ficheiro);
     }
 
@@ -609,11 +624,15 @@ codigo_erro_t guardar_dados(const char* caminho, estado_programa_t* estado_progr
  */
 codigo_erro_t carregar_dados(const char* caminho, estado_programa_t* estado_programa) {
     codigo_erro_t resultado = ERRO;
+    estado_programa_t* estado_programa_auxiliar;
 
-    inicializar_vetores(estado_programa);
     if (ficheiro_existe(caminho)) {
-        estado_programa = carregar_estado_programa(caminho);
+        estado_programa_auxiliar = carregar_estado_programa(caminho);
+        memcpy(estado_programa, estado_programa_auxiliar, sizeof(estado_programa_t));
         if (estado_programa != NULL) resultado = OK;
+    }
+    else {
+        inicializar_vetores(estado_programa);
     }
 
     return resultado;
@@ -723,8 +742,6 @@ void ler_data(const char* mensagem, char* data_output) {
 
     do {
         ler_string(mensagem, data, TAMANHO_DATA);
-        if (!data_valida(data))
-            printf("Data inválida. Introduza uma data válida no formato DD/MM/AAAA.\n");
     } while (!data_valida(data));
 
     sscanf(data, "%d/%d/%d", &dia, &mes, &ano);
@@ -743,8 +760,6 @@ void ler_hora(const char* mensagem, char* hora_output, char* data_inserida) {
 
     do {
         ler_string(mensagem, hora, TAMANHO_HORA);
-        if (!hora_valida(hora, data_inserida))
-            printf("Hora inválida. Introduza uma hora válida no formato HH:MM.\n");
     } while (!hora_valida(hora, data_inserida));
 
     sscanf(hora, "%d:%d", &hora_int, &minuto_int);
@@ -795,6 +810,60 @@ void ler_email(const char* mensagem, char* output) {
     strcpy(output, email);
 }
 
+void ler_associacao_estudantes(const char* mensagem, char* output) {
+    char associacao[TAMANHO_MAXIMO_AE];
+    char* associacoes_possiveis[5] = {"AE-ESTG", "AE-ESECS", "AE-ESSLEI", "AE-ESAD", "AE-ESTM"};
+
+    do {
+        ler_string(mensagem, associacao, TAMANHO_MAXIMO_AE);
+        string_para_maiusculas(associacao);
+        if (!vetor_contem_elemento(associacoes_possiveis, 5, associacao, STRING))
+            printf("Associacao de estudantes inválida. Associacoes possíveis: AE-ESTG, AE-ESECS, AE-ESSLEI, AE-ESAD, AE-ESTM.\n");
+
+    } while (!vetor_contem_elemento(associacoes_possiveis, 5, associacao, STRING));
+
+    strcpy(output, associacao);
+}
+
+int ler_id_participante(const char* mensagem, estado_programa_t* estado_programa) {
+    int id_participante;
+
+    do {
+        id_participante = ler_inteiro_intervalo(mensagem, 0, NUMERO_MAXIMO_DE_PARTICIPANTES, FALSE);
+        if (procurar_participante_por_id(id_participante, estado_programa) == ERRO)
+            printf("Participante inexistente. Introduza um ID de participante válido.\n");
+    } while (procurar_participante_por_id(id_participante, estado_programa) == ERRO);
+
+    return id_participante;
+}
+
+int ler_id_atividade(const char* mensagem, estado_programa_t* estado_programa) {
+    int id_atividade;
+
+    do {
+        id_atividade = ler_inteiro_intervalo(mensagem, 0, NUMERO_MAXIMO_DE_ATIVIDAES, FALSE);
+        if (procurar_atividade_por_id(id_atividade, estado_programa) == ERRO)
+            printf("Atividade inexistente. Introduza um ID de atividade válido.\n");
+    } while (procurar_atividade_por_id(id_atividade, estado_programa) == ERRO);
+
+    return id_atividade;
+}
+
+void ler_tipo_atividade(const char* mensagem, char* output) {
+    char tipo[TAMANHO_MAXIMO_TIPO_ATIVIDADE];
+    char* tipos_possiveis[6] = {"ACADEMICA", "LAZER", "CULTURA", "DESPORTO", "FORMACAO", "OUTRA"};
+
+    do {
+        ler_string(mensagem, tipo, TAMANHO_MAXIMO_TIPO_ATIVIDADE);
+        string_para_maiusculas(tipo);
+        if (!vetor_contem_elemento(tipos_possiveis, 6, tipo, STRING))
+            printf("Tipo de atividade inválido. Tipos possíveis: Academica, Lazer, Cultura, Desporto, Formacao ou Outra\n");
+
+    } while (!vetor_contem_elemento(tipos_possiveis, 6, tipo, STRING));
+
+    strcpy(output, tipo);
+}
+
 /**
  * @brief Lê os dados para a criação de um participante e guarda-os na estrutura
  * @param estado_programa
@@ -834,8 +903,8 @@ atividade_t* ler_atividade(estado_programa_t* estado_programa) {
     float valor;
 
     ler_string("Designação da atividade: ", designacao, TAMANHO_MAXIMO_DESIGNACAO);
-    ler_data("Data da atividade: ", data);
-    ler_hora("Hora da atividade: ", hora, data);
+    ler_data("Data da atividade (DD/MM/AAAA): ", data);
+    ler_hora("Hora da atividade (HH:MM): ", hora, data);
     ler_string("Local da atividade: ", local, TAMANHO_MAXIMO_LOCAL);
     ler_tipo_atividade("Tipo da atividade: ", tipo);
     ler_associacao_estudantes("Associacao de estudantes: ", associacao_estudantes);
@@ -910,6 +979,7 @@ codigo_erro_t inserir_atividade(estado_programa_t* estado_programa) {
         if (atividade != NULL) {
             estado_programa->atividades[*estado_programa->numero_de_atividades] = atividade;
             (*estado_programa->numero_de_atividades)++;
+            *estado_programa->dados_guardados = FALSE;
             resultado = OK;
         }
     }
@@ -937,6 +1007,7 @@ codigo_erro_t inserir_inscricao(estado_programa_t* estado_programa) {
         if (inscricao != NULL) {
             estado_programa->inscricoes[*estado_programa->numero_de_inscricoes] = inscricao;
             (*estado_programa->numero_de_inscricoes)++;
+            *estado_programa->dados_guardados = FALSE;
             resultado = OK;
         }
     }
@@ -1193,8 +1264,8 @@ bool_t confirmar_saida(estado_programa_t* estado_programa) {
     char mensagem[100];
 
     // Definir a mensagem consoante o estado do programa
-    estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ")
-                                     : strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ");
+    *estado_programa->dados_guardados ? strcpy(mensagem, "Tem a certeza que deseja sair? (s/n): ")
+                                      : strcpy(mensagem, "Tem a certeza que deseja sair sem guardar? (s/n): ");
 
     do {
         confirmacao = ler_char(mensagem);
@@ -1440,12 +1511,12 @@ bool_t data_valida(char* data) {
 
     if (ano == ano_atual) {
         if (mes < mes_atual) {
-            printf("O mês %d não pode ser anterior ao mês atual (%d).", mes, mes_atual);
+            printf("O mês %d não pode ser anterior ao mês atual (%d).\n", mes, mes_atual);
             valida = FALSE;
         }
         else {
             if (dia < dia_atual) {
-                printf("O dia %d não pode ser anterior ao dia atual (%d).", dia, dia_atual);
+                printf("O dia %d não pode ser anterior ao dia atual (%d).\n", dia, dia_atual);
                 valida = FALSE;
             }
         }
@@ -1469,12 +1540,12 @@ bool_t dia_mes_valido(int dia, int mes, int ano) {
     int num_dias_mes = dias_mes(mes, ano);
 
     if (dia < 1 || dia > num_dias_mes) {
-        printf("O dia %d não é válido para o mês %d do ano %d.", dia, mes, ano);
+        printf("O dia %d não é válido para o mês %d do ano %d.\n", dia, mes, ano);
         valido = FALSE;
     }
     else {
         if (mes < 1 || mes > 12) {
-            printf("O mês %d não é válido.", mes);
+            printf("O mês %d não é válido.\n", mes);
             valido = FALSE;
         }
     }
@@ -1493,7 +1564,7 @@ bool_t ano_valido(int ano, int ano_atual) {
     bool_t valido = TRUE;
 
     if (ano < ano_atual) {
-        printf("O ano %d não pode ser anterior ao ano atual (%d).", ano, ano_atual);
+        printf("O ano %d não pode ser anterior ao ano atual (%d).\n", ano, ano_atual);
         valido = FALSE;
     }
 
@@ -1515,13 +1586,13 @@ bool_t hora_valida(char* hora, char* data_inserida) {
 
     if (ano_inserido == ano_atual && mes_inserido == mes_atual && dia_inserido == dia_atual) {
         if (hora_inserida < hora_atual) {
-            printf("A hora %d não pode ser anterior à hora atual (%d).", hora_inserida, hora_atual);
+            printf("A hora %d não pode ser anterior à hora atual (%d).\n", hora_inserida, hora_atual);
             valido = FALSE;
         }
 
         if (hora_inserida == hora_atual) {
             if (minuto_inserido < minuto_atual) {
-                printf("O minuto %d não pode ser anterior ao minuto atual (%d).", minuto_inserido, minuto_atual);
+                printf("O minuto %d não pode ser anterior ao minuto atual (%d).\n", minuto_inserido, minuto_atual);
                 valido = FALSE;
             }
         }
@@ -1536,12 +1607,12 @@ bool_t hora_minuto_valido(int hora, int minuto) {
     bool_t valido = TRUE;
 
     if (hora < 0 || hora > 23) {
-        printf("A hora %d não é válida. A hora tem que estar entre 0 e 23", hora);
+        printf("A hora %d não é válida. A hora tem que estar entre 0 e 23\n", hora);
         valido = FALSE;
     }
     else {
         if (minuto < 0 || minuto > 59) {
-            printf("O minuto %d não é válido. O minuto tem que estar entre 0 e 59", minuto);
+            printf("O minuto %d não é válido. O minuto tem que estar entre 0 e 59\n", minuto);
             valido = FALSE;
         }
     }
