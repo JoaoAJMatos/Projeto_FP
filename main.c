@@ -1731,7 +1731,10 @@ int procurar_participante_por_id(int id, estado_programa_t* estado_programa) {
     bool_t encontrado = FALSE;      
     
     for (indice = 0; indice < *estado_programa->numero_de_participantes; indice++) {
-        if (estado_programa->participantes[indice]->identificador == id) encontrado = TRUE;
+        if (estado_programa->participantes[indice]->identificador == id) {
+            encontrado = TRUE;
+            break;
+        }
     }
     
     return encontrado ? indice : ERRO;
@@ -1742,7 +1745,10 @@ int procurar_atividade_por_id(int id, estado_programa_t* estado_programa) {
     bool_t encontrado = FALSE;
     
     for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
-        if (estado_programa->atividades[indice]->identificador == id) encontrado = TRUE;
+        if (estado_programa->atividades[indice]->identificador == id) {
+            encontrado = TRUE;
+            break;
+        }
     }
 
     return encontrado ? indice : ERRO;
@@ -1753,7 +1759,10 @@ int procurar_inscricao_por_id(int id, estado_programa_t* estado_programa) {
     bool_t encontrado = FALSE;
 
     for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
-        if (estado_programa->inscricoes[indice]->identificador == id) encontrado = TRUE;
+        if (estado_programa->inscricoes[indice]->identificador == id) {
+            encontrado = TRUE;
+            break;
+        }
     }
 
     return encontrado ? indice : ERRO;
