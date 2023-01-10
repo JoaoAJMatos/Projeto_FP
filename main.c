@@ -3,11 +3,12 @@
  * @author Joao Matos (github.com/JoaoAJMatos) & Rúben Lisboa (github.com/Lisboa14)
  * @version 1.0
  * @date 18-12-2022
- *
+ * 
  * @copyright Copyright (c) 2022
  */
 
-// TODO: Criar um membro do struct que indica o ultimo código de erro e a sua mensagem
+// TODO: Adicionar mais opções de estatísticas ao programa. Por exemplo:
+// - 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -128,6 +129,13 @@ typedef enum {                          // Menu de estatísticas
     VOLTAR_MENU_PRINCIPAL_ESTATISTICAS
 } opcao_menu_estatisticas_t;
 
+typedef enum {                          // Associacoes de estudantes
+    AE_ESTG = 1,
+    AE_ESECS,
+    AE_ESSLEI,
+    AE_ESAD,
+    AE_ESTM
+} associacao_estudantes_t;
 
 /* ========================================================== */
 /* =                      ESTRUTURAS                        = */
@@ -143,7 +151,7 @@ typedef struct {
 } participante_t;
 
 typedef struct {
-    int   identificador;                            // Identificador único da atividade
+    int   identificador;                             // Identificador único da atividade
     char  designacao[TAMANHO_MAXIMO_DESIGNACAO];    // Designação da atividade (ex: "Maratona Solidária")
     char  data[TAMANHO_DATA];                       // Data da atividade (ex: "30/04/2023")
     char  hora[TAMANHO_HORA];                       // Hora da atividade (ex: "09:00")
@@ -192,10 +200,10 @@ typedef struct {
 /* ========================================================== */
 
 /// @brief Utilitários dos structs
-participante_t* criar_participante(char*, char*, int, char*, int, estado_programa_t*);
-atividade_t* criar_atividade(char*, char*, char*, char*, char*, char*, float, estado_programa_t*);
-inscricao_t* criar_inscricao(int, int, estado_programa_t*);
-estado_programa_t* criar_estado_programa(participante_t**, atividade_t**, inscricao_t**, int*, int*, int*);
+participante_t* criar_participante(char* nome, char* escola, int nif, char* email, int telefone, estado_programa_t*);
+atividade_t* criar_atividade(char* designacao, char* data, char* hora, char* local, char* tipo, char* associacao_estudantes, float valor, estado_programa_t*);
+inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_programa_t*);
+estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, atividade_t** vetor_atividades, inscricao_t** vetor_inscricoes, int* numero_participantes, int* numero_atividades, int* numero_inscricoes);
 
 void libertar_participante(participante_t*);
 void libertar_atividade(atividade_t*);
@@ -218,36 +226,36 @@ inline_ static void mostrar_inscricoes(estado_programa_t*, bool_t);
 void guardar_participantes(estado_programa_t*, FILE*);
 void guardar_atividades(estado_programa_t*, FILE*);
 void guardar_inscricoes(estado_programa_t*, FILE*);
-codigo_erro_t guardar_estado_programa(const char*, estado_programa_t*);
+codigo_erro_t guardar_estado_programa(const char* caminho, estado_programa_t*);
 
 void carregar_participantes(estado_programa_t*, FILE*);
 void carregar_atividades(estado_programa_t*, FILE*);
 void carregar_inscricoes(estado_programa_t*, FILE*);
-estado_programa_t* carregar_estado_programa(const char*);
+estado_programa_t* carregar_estado_programa(const char* caminho);
 
-codigo_erro_t carregar_dados(const char*, estado_programa_t*);
-codigo_erro_t guardar_dados(const char*, estado_programa_t*);
+codigo_erro_t carregar_dados(const char* caminho, estado_programa_t*);
+codigo_erro_t guardar_dados(const char* caminho, estado_programa_t*);
 
 /* ========================================================== */
 
 /// @brief Utilitários de input 
-void  ler_string(const char*, char*, int);
-int   ler_inteiro_intervalo(const char*, int, int, bool_t);
-float  ler_float_intervalo(const char*, float, float);
-char  ler_char(const char*);
+void  ler_string(const char* mensagem, char* string, int tamanho_maximo);
+int   ler_inteiro_intervalo(const char* mensagem, int minimo, int maximo, bool_t mostrar_mensagem_erro);
+float  ler_float_intervalo(const char* mensagem, float minimo, float maximo);
+char  ler_char(const char* mensagem);
 
-void  ler_escola(const char*, char*);
-void  ler_data(const char*, char*);
-void  ler_hora(const char*, char*, char*);
+void  ler_escola(const char* mensagem, char* escola);
+void  ler_data(const char* mensagem, char* data);
+void  ler_hora(const char* mensagem, char* hora, char* data_inserida);
 
-void  ler_email(const char*, char*);
-int   ler_nif(const char*);
-int   ler_telefone(const char*);
+void  ler_email(const char* mensagem, char* email);
+int   ler_nif(const char* mensagem);
+int   ler_telefone(const char* mensagem);
 
-void  ler_tipo_atividade(const char*, char*);
-void  ler_associacao_estudantes(const char*, char*);
-int   ler_id_participante(const char*, estado_programa_t*);
-int   ler_id_atividade(const char*, estado_programa_t*);
+void  ler_tipo_atividade(const char* mensagem, char* tipo);
+void  ler_associacao_estudantes(const char* mensagem, char* associacao_estudantes);
+int   ler_id_participante(const char* mensagem, estado_programa_t*);
+int   ler_id_atividade(const char* mensagem, estado_programa_t*);
 
 participante_t* ler_participante(estado_programa_t*);
 atividade_t* ler_atividade(estado_programa_t*);
@@ -260,7 +268,7 @@ codigo_erro_t inserir_inscricao(estado_programa_t*);
 /* ========================================================== */
 
 void inicializar_vetores(estado_programa_t*);
-bool_t ficheiro_existe(const char*);
+bool_t ficheiro_existe(const char* caminho);
 
 /* ========================================================== */
 
@@ -270,9 +278,9 @@ void listar_inscricoes(estado_programa_t*);
 
 /* ========================================================== */
 
-int procurar_atividade_por_id(int, estado_programa_t*);
-int procurar_participante_por_id(int, estado_programa_t*);
-int procurar_inscricao_por_id(int, estado_programa_t*);
+int procurar_atividade_por_id(int id, estado_programa_t*);
+int procurar_participante_por_id(int id, estado_programa_t*);
+int procurar_inscricao_por_id(int id, estado_programa_t*);
 
 /* ========================================================== */
 
@@ -283,20 +291,20 @@ char* obter_hora_atual_string_com_segundos();
 /* ========================================================== */
 
 bool_t confirmar_saida(estado_programa_t*);
-bool_t vetor_contem_elemento(void*, int, void*, tipo_primitivo_t);
-bool_t nif_valido(int);
+bool_t vetor_contem_elemento(void* vetor, int tamanho, void* elemento_procura, tipo_primitivo_t);
+bool_t nif_valido(int nif);
 
-bool_t email_parte_local_valida(char*, int, int);     // Para validar as diversas partes do email segundo as definicoes do RFC 5322 e 5321
-bool_t email_parte_dominio_valida(char*, int, int);   //
-bool_t email_valido(char*);                           // Para validar o email como um todo
+bool_t email_parte_local_valida(char* email, int tamanho_email, int posicao_arroba);     // Para validar as diversas partes do email segundo as definicoes do RFC 5322 e 5321
+bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_arroba);   //
+bool_t email_valido(char* email);                                                        // Para validar o email como um todo
 
-bool_t data_valida(char*);
-bool_t dia_mes_valido(int, int, int);
-bool_t hora_minuto_valido(int, int);
-bool_t ano_valido(int, int);
-bool_t hora_valida(char*, char*);
+bool_t data_valida(char* data);
+bool_t dia_mes_valido(int dia, int mes, int ano);
+bool_t hora_minuto_valido(int hora, int minuto);
+bool_t ano_valido(int ano_inserido, int ano_atual);
+bool_t hora_valida(char* hora, char* data_inserida);
 
-int posicao_char_na_string(char, char*, int);
+int posicao_char_na_string(char caractere, char* string, int tamanho_string);
 
 /* ========================================================== */
 
@@ -314,9 +322,9 @@ void menu_estatisticas(estado_programa_t*);
 
 /* ========================================================== */
 
-void string_para_minusculas(char*);
-void string_para_maiusculas(char*);
-void esperar_tecla(const char*);
+void string_para_minusculas(char* string);
+void string_para_maiusculas(char* string);
+void esperar_tecla(const char* mensagem);
 
 /* ========================================================== */
 
@@ -330,8 +338,10 @@ int   obter_dia_atual();
 int   obter_hora_atual();
 int   obter_minuto_atual();
 
-bool_t ano_bissexto(int);
-inline_ int dias_mes(int, int);
+bool_t ano_bissexto(int ano);
+inline_ int dias_mes(int mes, int ano);
+
+int data_hora_para_timestamp(char* data, char* hora);
 
 /* ========================================================== */
 
@@ -1879,7 +1889,7 @@ opcao_menu_estatisticas_t ler_opcao_menu_estatisticas() {
         limpar_ecra();
 
         printf("Menu Estatisticas\n");
-        printf("1. Numero de atividades por associacao\n");
+        printf("1. Numero de atividades por AE\n");
         printf("2. Percentagem de inscricoes por escola\n");
         printf("3. Valor total angariado em horizonte temporal\n");
         printf("4. Voltar\n");
@@ -1983,8 +1993,10 @@ void menu_estatisticas(estado_programa_t* estado_programa) {
         switch (opcao)
         {
         case NUMERO_DE_ATIVIDADES_POR_ASSOCIACAO:
+            mostrar_numero_atividades_por_ae(estado_programa);
             break;
         case PERCENTAGEM_DE_INSCRICOES_POR_ESCOLA:
+            mostrar_percentagem_inscricoes_por_escola(estado_programa);
             break;
         case VALOR_TOTAL_DAS_INSCRICOES_EM_HORIZONTE_TEMPORAL:
             break;
@@ -2069,8 +2081,70 @@ char* timestamp_para_data(int timestamp) {
 
 /* ========================================================== */
 /* =                     ESTATÍSTICAS                       = */
-/* ========================================================== */
+/* =========================s================================= */
 
-void mostrar_numero_atividades_por_ae(estado_programa_t* estado_programa_t) {
+/**
+ * @brief Mostra o número de atividades registadas para cada uma das associações de estudantes
+ * 
+ * @param estado_programa_t 
+ */
+void mostrar_numero_atividades_por_ae(estado_programa_t* estado_programa) {
+    int contador_atividades[5] = {0, 0, 0, 0, 0};   // Contadores para cada uma das associações de estudantes
+    int indice, indice_associacao_estudantes;
+    char* associacoes_possiveis[5] = {"AE-ESTG", "AE-ESECS", "AE-ESSLEI", "AE-ESAD", "AE-ESTM"};
+
+    limpar_ecra();
+    if (*estado_programa->numero_de_atividades == 0) printf("Não existem atividades inseridas.\n");
+    else {
+        for (indice = 0; indice < *estado_programa->numero_de_atividades; indice++) {
+            for (indice_associacao_estudantes = 0; indice_associacao_estudantes < 5; indice_associacao_estudantes++)
+                if (strcmp(estado_programa->atividades[indice]->associacao_estudantes, associacoes_possiveis[indice_associacao_estudantes]) == OK)
+                    contador_atividades[indice_associacao_estudantes]++;
+        }
+
+        // Mostrar o resultado
+        printf("Numero de atividades inseridas: %d\n", *estado_programa->numero_de_atividades);
+        printf("Numero de atividades por associação de estudantes:\n");
+        for (indice = 0; indice < 5; indice++)
+            printf("%s: %d\n", associacoes_possiveis[indice], contador_atividades[indice]);
+    }   
+    esperar_tecla("Pressione qualquer tecla para continuar...");
+}
+
+/**
+ * @brief Mostra a percentagem de inscrições efetuadas por cada uma das escolas
+ * 
+ * @param estado_programa_t 
+ */
+void mostrar_percentagem_inscricoes_por_escola(estado_programa_t* estado_programa) {
+    int contador_inscricoes[5] = {0, 0, 0, 0, 0};   // Contadores para cada uma das escolas
+    int indice, indice_escola;
+    char* escolas_possiveis[5] = {"ESTG", "ESECS", "ESSLEI", "ESAD", "ESTM"};
+
+    limpar_ecra();
+    if (*estado_programa->numero_de_inscricoes == 0) printf("Não existem inscrições registadas.\n");
+    else {
+        for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {   // Percorre as inscrições
+            for (indice_escola = 0; indice_escola < 5; indice_escola++)                 // Percorre as escolas
+                // Se as escolas forem iguais, incrementa o contador
+                if (strcmp(estado_programa->participantes[estado_programa->inscricoes[indice]->id_participante]->escola, escolas_possiveis[indice_escola]) == OK)
+                    contador_inscricoes[indice_escola]++;
+
+            // Mostrar os dados
+            printf("Numero de inscricoes: %d\n", *estado_programa->numero_de_inscricoes);
+            printf("Percentagem de inscrições por escola:\n");
+            for (indice = 0; indice < 5; indice++)
+                printf("%s: %.2f%%\n", escolas_possiveis[indice], (float) contador_inscricoes[indice] / *estado_programa->numero_de_inscricoes * 100);
+        }
+    }
+    esperar_tecla("Pressione qualquer tecla para continuar...");
+}
+
+/**
+ * @brief Mostra o valor angariado de todas as inscrições efetuadas dentro de um horizonte temporal
+ * 
+ * @param estado_programa 
+ */
+void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t* estado_programa) {
 
 }
