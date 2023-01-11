@@ -4,11 +4,12 @@
  * @version 1.0
  * @date 18-12-2022
  * 
+ * @link Repositório remoto:
+ * 
  * @copyright Copyright (c) 2022
  */
 
 // TODO: Adicionar mais opções de estatísticas ao programa. Por exemplo:
-// - 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -245,8 +246,8 @@ float  ler_float_intervalo(const char* mensagem, float minimo, float maximo);
 char  ler_char(const char* mensagem);
 
 void  ler_escola(const char* mensagem, char* escola);
-void  ler_data(const char* mensagem, char* data);
-void  ler_hora(const char* mensagem, char* hora, char* data_inserida);
+void  ler_data(const char* mensagem, char* data, bool_t autorizar_data_passada);
+void  ler_hora(const char* mensagem, char* hora, char* data_inserida, bool_t autorizar_hora_passada);
 
 void  ler_email(const char* mensagem, char* email);
 int   ler_nif(const char* mensagem);
@@ -264,6 +265,8 @@ inscricao_t* ler_inscricao(estado_programa_t*);
 codigo_erro_t inserir_participante(estado_programa_t*);
 codigo_erro_t inserir_atividade(estado_programa_t*);
 codigo_erro_t inserir_inscricao(estado_programa_t*);
+
+void ler_horizonte_temporal(char* data_inicial, char* hora_inicial, char* data_final, char* hora_final);
 
 /* ========================================================== */
 
@@ -298,11 +301,11 @@ bool_t email_parte_local_valida(char* email, int tamanho_email, int posicao_arro
 bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_arroba);   //
 bool_t email_valido(char* email);                                                        // Para validar o email como um todo
 
-bool_t data_valida(char* data);
+bool_t data_valida(char* data, bool_t autorizar_data_passada);
 bool_t dia_mes_valido(int dia, int mes, int ano);
 bool_t hora_minuto_valido(int hora, int minuto);
 bool_t ano_valido(int ano_inserido, int ano_atual);
-bool_t hora_valida(char* hora, char* data_inserida);
+bool_t hora_valida(char* hora, char* data_inserida, bool_t autorizar_hora_passada);
 
 int posicao_char_na_string(char caractere, char* string, int tamanho_string);
 
@@ -342,6 +345,7 @@ bool_t ano_bissexto(int ano);
 inline_ int dias_mes(int mes, int ano);
 
 int data_hora_para_timestamp(char* data, char* hora);
+inline_ int obter_timestamp_inscricao(inscricao_t*);
 
 /* ========================================================== */
 
@@ -741,13 +745,13 @@ void ler_escola(const char* mensagem, char* output) {
  * @param mensagem 
  * @param data_output 
  */
-void ler_data(const char* mensagem, char* data_output) {
+void ler_data(const char* mensagem, char* data_output, bool_t autorizar_data_passada) {
     char data[TAMANHO_DATA];
     int dia, mes, ano;
 
     do {
         ler_string(mensagem, data, TAMANHO_DATA);
-    } while (!data_valida(data));
+    } while (!data_valida(data, autorizar_data_passada));
 
     sscanf(data, "%d/%d/%d", &dia, &mes, &ano);
     sprintf(data_output, DATA_FORMATO, dia, mes, ano);
@@ -759,13 +763,13 @@ void ler_data(const char* mensagem, char* data_output) {
  * @param mensagem 
  * @param hora_output 
  */
-void ler_hora(const char* mensagem, char* hora_output, char* data_inserida) {
+void ler_hora(const char* mensagem, char* hora_output, char* data_inserida, bool_t autorizar_hora_passada) {
     char hora[TAMANHO_HORA];
     int hora_int, minuto_int;
 
     do {
         ler_string(mensagem, hora, TAMANHO_HORA);
-    } while (!hora_valida(hora, data_inserida));
+    } while (!hora_valida(hora, data_inserida, autorizar_hora_passada));
 
     sscanf(hora, "%d:%d", &hora_int, &minuto_int);
     sprintf(hora_output, HORA_FORMATO, hora_int, minuto_int);
@@ -813,6 +817,26 @@ void ler_email(const char* mensagem, char* output) {
     } while (!email_valido(email));
     
     strcpy(output, email);
+}
+
+void ler_horizonte_temporal(char* data_inicial, char* hora_inicial, char* data_final, char* hora_final) {
+    int timestamp_inicial, timestamp_final;
+
+    do {
+        limpar_ecra();
+        ler_data("Insira a data do inicio da pesquisa (DD/MM/AAAA): ", data_inicial, TRUE);
+        ler_hora("Insira a hora do inicio da pesquisa (HH:MM): ", hora_inicial, NULL, TRUE);
+        ler_data("Insira a data do fim da pesquisa (DD/MM/AAAA): ", data_final, TRUE);
+        ler_hora("Insira a hora do fim da pesquisa (HH:MM): ", hora_final, NULL, TRUE);
+
+        timestamp_inicial = data_hora_para_timestamp(data_inicial, hora_inicial);
+        timestamp_final = data_hora_para_timestamp(data_final, hora_final);
+
+        if (timestamp_final < timestamp_inicial) {
+            printf("A data e hora de fim da pesquisa devem ser posteriores à data e hora de inicio da pesquisa.\n");
+            esperar_tecla(NULL);
+        }
+    } while (timestamp_final < timestamp_inicial);
 }
 
 void ler_associacao_estudantes(const char* mensagem, char* output) {
@@ -908,8 +932,8 @@ atividade_t* ler_atividade(estado_programa_t* estado_programa) {
     float valor;
 
     ler_string("Designação da atividade: ", designacao, TAMANHO_MAXIMO_DESIGNACAO);
-    ler_data("Data da atividade (DD/MM/AAAA): ", data);
-    ler_hora("Hora da atividade (HH:MM): ", hora, data);
+    ler_data("Data da atividade (DD/MM/AAAA): ", data, FALSE); // A flag FALSE indica que a data não pode ser anterior à atual
+    ler_hora("Hora da atividade (HH:MM): ", hora, data, FALSE);
     ler_string("Local da atividade: ", local, TAMANHO_MAXIMO_LOCAL);
     ler_tipo_atividade("Tipo da atividade: ", tipo);
     ler_associacao_estudantes("Associacao de estudantes: ", associacao_estudantes);
@@ -1509,12 +1533,12 @@ inline_ int dias_mes(int mes, int ano) {
  * @param data 
  * @return bool_t 
  */
-bool_t data_valida(char* data) {
+bool_t data_valida(char* data, bool_t autorizar_data_passada) {
     bool_t valida = TRUE;
     int dia = atoi(data + 0), mes = atoi(data + 3), ano = atoi(data + 6);
     int dia_atual = obter_dia_atual(), mes_atual = obter_mes_atual(), ano_atual = obter_ano_atual();
 
-    if (ano == ano_atual) {
+    if (!autorizar_data_passada && (ano == ano_atual)) {
         if (mes < mes_atual) {
             printf("O mês %d não pode ser anterior ao mês atual (%d).\n", mes, mes_atual);
             valida = FALSE;
@@ -1528,7 +1552,8 @@ bool_t data_valida(char* data) {
     }
 
     if (!dia_mes_valido(dia, mes, ano)) valida = FALSE;
-    else if (!ano_valido(ano, ano_atual)) valida = FALSE;
+    else if (!autorizar_data_passada)
+        if (!ano_valido(ano, ano_atual)) valida = FALSE;
     return valida;
 }
 
@@ -1582,14 +1607,15 @@ bool_t ano_valido(int ano, int ano_atual) {
  * @param data 
  * @return bool_t 
  */
-bool_t hora_valida(char* hora, char* data_inserida) {
+bool_t hora_valida(char* hora, char* data_inserida, bool_t autorizar_hora_passada) {
     int hora_inserida = atoi(hora), minuto_inserido = atoi(hora + 3);
     int hora_atual = obter_hora_atual(), minuto_atual = obter_minuto_atual();
-    int dia_inserido = atoi(data_inserida), mes_inserido = atoi(data_inserida + 3), ano_inserido = atoi(data_inserida + 6);
+    int dia_inserido, mes_inserido, ano_inserido;
     int dia_atual = obter_dia_atual(), mes_atual = obter_mes_atual(), ano_atual = obter_ano_atual();
     bool_t valido = TRUE;
 
-    if (ano_inserido == ano_atual && mes_inserido == mes_atual && dia_inserido == dia_atual) {
+    if (data_inserida != NULL) sscanf(data_inserida, "%d/%d/%d", &dia_inserido, &mes_inserido, &ano_inserido);
+    if (!autorizar_hora_passada && (ano_inserido == ano_atual && mes_inserido == mes_atual && dia_inserido == dia_atual)) {
         if (hora_inserida < hora_atual) {
             printf("A hora %d não pode ser anterior à hora atual (%d).\n", hora_inserida, hora_atual);
             valido = FALSE;
@@ -1999,6 +2025,7 @@ void menu_estatisticas(estado_programa_t* estado_programa) {
             mostrar_percentagem_inscricoes_por_escola(estado_programa);
             break;
         case VALOR_TOTAL_DAS_INSCRICOES_EM_HORIZONTE_TEMPORAL:
+            mostrar_valor_inscricoes_horizonte_temporal(estado_programa);
             break;
         case VOLTAR_MENU_PRINCIPAL_ESTATISTICAS:
             break;
@@ -2081,7 +2108,7 @@ char* timestamp_para_data(int timestamp) {
 
 /* ========================================================== */
 /* =                     ESTATÍSTICAS                       = */
-/* =========================s================================= */
+/* ========================================================== */
 
 /**
  * @brief Mostra o número de atividades registadas para cada uma das associações de estudantes
@@ -2146,5 +2173,67 @@ void mostrar_percentagem_inscricoes_por_escola(estado_programa_t* estado_program
  * @param estado_programa 
  */
 void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t* estado_programa) {
+    char data_inicio[TAMANHO_DATA], data_fim[TAMANHO_DATA], hora_inicio[TAMANHO_HORA], hora_fim[TAMANHO_HORA];
+    int timestamp_inicio, timestamp_fim, timestamp_inscricao, indice;
+    float valor_total = 0;
 
+    limpar_ecra();
+    if (*estado_programa->numero_de_inscricoes == 0) printf("Não existem inscrições registadas.\n");
+    else {
+        ler_horizonte_temporal(data_inicio, hora_inicio, data_fim, hora_fim);
+        
+        // Percorrer as inscrições e verificar se estão dentro do horizonte temporal, se estiverem, adicionar ao valor total
+        for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
+            timestamp_inscricao = obter_timestamp_inscricao(estado_programa->inscricoes[indice]);
+            if (timestamp_inscricao >= timestamp_inicio && timestamp_inscricao <= timestamp_fim)
+                valor_total += estado_programa->inscricoes[indice]->valor_pago;
+            }
+        printf("\nValor total das inscrições entre %s (às %s) e %s (às %s): %.2f\n", data_inicio, hora_inicio, data_fim, hora_fim, valor_total);
+    }
+    esperar_tecla("Pressione qualquer tecla para continuar...");
+}
+
+/* ========================================================== */
+
+/**
+ * @brief Recebe a data e a hora em formato de string e devolve a timestamp correspondente
+ * 
+ * Esta implementação foi adaptada de:
+ * -  https://www.oryx-embedded.com/doc/date__time_8c_source.html
+ * -  https://stackoverflow.com/questions/1002542/how-to-convert-datetime-to-unix-timestamp-in-c
+ * -  https://www.epochconverter.com/programming/c
+ * 
+ * @param data 
+ * @param hora 
+ * @return int 
+ */
+int data_hora_para_timestamp(char* data, char* hora) {
+    int dia, mes, ano, hora_int, minuto, timestamp;
+    struct tm tempo;
+    
+    // Retirar os alementos das strings passadas para a função
+    sscanf(data, "%d/%d/%d", &dia, &mes, &ano);
+    sscanf(hora, "%d:%d", &hora_int, &minuto);
+
+    // Construir o struct do tempo 
+    tempo.tm_year = ano - 1900;
+    tempo.tm_mon = mes - 1;
+    tempo.tm_mday = dia;
+    tempo.tm_hour = hora_int;
+    tempo.tm_min = minuto;
+    tempo.tm_sec = 0;
+
+    // Converter para timestamp
+    timestamp = mktime(&tempo);
+    return timestamp;
+}
+
+/**
+ * @brief Calcula a timestamp do momento da criação de uma inscrição
+ * 
+ * @param inscricao 
+ * @return int 
+ */
+inline_ int obter_timestamp_inscricao(inscricao_t* inscricao) {
+    return data_hora_para_timestamp(inscricao->data, inscricao->hora);
 }
