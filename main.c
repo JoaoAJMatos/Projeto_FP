@@ -2100,7 +2100,7 @@ void menu_atividades(estado_programa_t* estado_programa) {
             inserir_atividade(estado_programa);
             break;
         case LISTAR_ATIVIDADES:
-            listar_participantes(estado_programa);
+            listar_atividades(estado_programa);
             break;
         case VOLTAR_MENU_PRINCIPAL_ATIVIDADES:
             break;
