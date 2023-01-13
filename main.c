@@ -1542,16 +1542,10 @@ bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arrob
                 if (vetor_contem_elemento(mail + 1, tamanho_parte_local - 1, &ponto, CHAR)) valido = FALSE; 
             } else {
                 // Verifica se a parte local do email contem apenas caracteres válidos
-                if (!vetor_contem_elemento(mail, tamanho_parte_local, caracteres_validos_parte_local, CHAR)) 
-                {
-                    printf("O email contem caracteres invalidos na parte local.\n");
-                    valido = FALSE;
-                }
+                if (!vetor_contem_elemento(mail, tamanho_parte_local, caracteres_validos_parte_local, CHAR)) valido = FALSE;
             }
         }
     }
-
-    if (!valido) printf("A parte local do email nao e valida\n");
 
     return valido;
 }
@@ -1587,8 +1581,6 @@ bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_ar
             }
         }
     }
-
-    if (!valido) printf("A parte do dominio do email nao e valida");
 
     return valido;
 }
