@@ -1633,11 +1633,9 @@ bool_t data_valida(char* data, bool_t autorizar_data_passada) {
             printf("O mês %d não pode ser anterior ao mês atual (%d).\n", mes, mes_atual);
             valida = FALSE;
         }
-        else {
-            if (dia < dia_atual) {
-                printf("O dia %d não pode ser anterior ao dia atual (%d).\n", dia, dia_atual);
-                valida = FALSE;
-            }
+        else if (mes == mes_atual && dia < dia_atual) {
+            printf("O dia %d não pode ser anterior ao dia atual (%d).\n", dia, dia_atual);
+            valida = FALSE;
         }
     }
 
