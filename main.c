@@ -4,7 +4,7 @@
  * @version 1.0
  * @date 18-12-2022
  * 
- * @link Repositório remoto:
+ * @link Repositório remoto: https://github.com/JoaoAJMatos/Projeto_FP
  * 
  * @copyright Copyright (c) 2022
  */
@@ -825,6 +825,8 @@ void ler_email(const char* mensagem, char* output) {
     char email[TAMANHO_MAXIMO_EMAIL];
     
     do {
+        fflush(stdin);
+        fflush(stdin);
         ler_string(mensagem, email, TAMANHO_MAXIMO_EMAIL);
         if (!email_valido(email))
             printf("Email inválido. Introduza um email válido.\n");
@@ -1528,7 +1530,7 @@ bool_t email_valido(char* mail) {
 bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arroba) {
     bool_t valido = TRUE;
     int tamanho_parte_local = posicao_arroba;
-    char caracteres_validos_parte_local[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'*+-/=?^_`{|}~.*";
+    char caracteres_validos_parte_local[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'*+-/=?^_`{|}~.*";
     char ponto = '.';
 
     if (tamanho_parte_local < 1 || tamanho_parte_local > 64) valido = FALSE;        // A parte local do email deve ter entre 1 e 64 caracteres
@@ -1540,10 +1542,16 @@ bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arrob
                 if (vetor_contem_elemento(mail + 1, tamanho_parte_local - 1, &ponto, CHAR)) valido = FALSE; 
             } else {
                 // Verifica se a parte local do email contem apenas caracteres válidos
-                if (!vetor_contem_elemento(mail, tamanho_parte_local, caracteres_validos_parte_local, CHAR)) valido = FALSE;
+                if (!vetor_contem_elemento(mail, tamanho_parte_local, caracteres_validos_parte_local, CHAR)) 
+                {
+                    printf("O email contem caracteres invalidos na parte local.\n");
+                    valido = FALSE;
+                }
             }
         }
     }
+
+    if (!valido) printf("A parte local do email nao e valida\n");
 
     return valido;
 }
@@ -1579,6 +1587,8 @@ bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_ar
             }
         }
     }
+
+    if (!valido) printf("A parte do dominio do email nao e valida");
 
     return valido;
 }
