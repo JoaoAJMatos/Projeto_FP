@@ -2263,13 +2263,13 @@ void mostrar_percentagem_inscricoes_por_escola(estado_programa_t* estado_program
                 // Se as escolas forem iguais, incrementa o contador
                 if (strcmp(estado_programa->participantes[estado_programa->inscricoes[indice]->id_participante]->escola, escolas_possiveis[indice_escola]) == OK)
                     contador_inscricoes[indice_escola]++;
-
-            // Mostrar os dados
-            printf("Numero de inscricoes: %d\n", *estado_programa->numero_de_inscricoes);
-            printf("Percentagem de inscrições por escola:\n");
-            for (indice = 0; indice < 5; indice++)
-                printf("%s: %.2f%%\n", escolas_possiveis[indice], (float) contador_inscricoes[indice] / *estado_programa->numero_de_inscricoes * 100);
         }
+
+        // Mostrar os dados
+        printf("Numero de inscricoes: %d\n", *estado_programa->numero_de_inscricoes);
+        printf("Percentagem de inscrições por escola:\n");
+        for (indice = 0; indice < 5; indice++)
+            printf("%s: %.2f%%\n", escolas_possiveis[indice], (float) contador_inscricoes[indice] / *estado_programa->numero_de_inscricoes * 100);
     }
     esperar_tecla("Pressione qualquer tecla para continuar...");
 }
