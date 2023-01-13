@@ -412,6 +412,23 @@ int main() {
     return OK;
 }
 
+/* ========================================================== */
+
+void listar_participantes(estado_programa_t* estado_programa) {
+    limpar_ecra();
+    mostrar_participantes(estado_programa, TRUE);
+}
+
+void listar_atividades(estado_programa_t* estado_programa) {
+    limpar_ecra();
+    mostrar_atividades(estado_programa, TRUE);
+}
+
+void listar_inscricoes(estado_programa_t* estado_programa) {
+    limpar_ecra();
+    mostrar_inscricoes(estado_programa, TRUE);
+}
+
 
 /* ========================================================== */
 /* =               GUARDAR & CARREGAR DADOS                 = */
@@ -1218,9 +1235,17 @@ void libertar_estado_programa(estado_programa_t* estado_programa) {
 
 
 /// Liberta memória alocada para cada um dos componentes individuais dos vetores de dados
-void libertar_participante(participante_t* participante) {free(participante);}
-void libertar_atividade(atividade_t* atividade) {free(atividade);}
-void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
+void libertar_participante(participante_t* participante) {
+    if (participante != NULL) free(participante);
+}
+
+void libertar_atividade(atividade_t* atividade) {
+    if (atividade != NULL) free(atividade);
+}
+
+void libertar_inscricao(inscricao_t* inscricao) {
+    if (inscricao != NULL) free(inscricao);
+}
 
 
 /* ========================================================== */
@@ -1295,8 +1320,6 @@ void mostrar_inscricao(inscricao_t* inscricao) {
  */
 void mostrar_participantes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_participantes = *estado_programa->numero_de_participantes;
-
-    limpar_ecra();
 
     if (numero_participantes == 0) {
         printf("Não existem participantes registados.\n");
@@ -2054,7 +2077,7 @@ void menu_participantes(estado_programa_t* estado_programa) {
             inserir_participante(estado_programa);
             break;
         case LISTAR_PARTICIPANTES:
-            mostrar_participantes(estado_programa, TRUE);
+            listar_participantes(estado_programa);
             break;
         case VOLTAR_MENU_PRINCIPAL_PARTICIPANTES:
             break;
@@ -2079,7 +2102,7 @@ void menu_atividades(estado_programa_t* estado_programa) {
             inserir_atividade(estado_programa);
             break;
         case LISTAR_ATIVIDADES:
-            mostrar_atividades(estado_programa, TRUE);
+            listar_participantes(estado_programa);
             break;
         case VOLTAR_MENU_PRINCIPAL_ATIVIDADES:
             break;
@@ -2104,7 +2127,7 @@ void menu_inscricoes(estado_programa_t* estado_programa) {
             inserir_inscricao(estado_programa);
             break;
         case LISTAR_INSCRICOES:
-            mostrar_inscricoes(estado_programa, TRUE);
+            listar_inscricoes(estado_programa);
             break;
         case VOLTAR_MENU_PRINCIPAL_INSCRICOES:
             break;
