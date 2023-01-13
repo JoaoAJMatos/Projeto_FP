@@ -16,26 +16,18 @@
 #include <time.h>
 #include <locale.h>
 
-// A keyword "inline" parecia causar problemas com o GCC na minha
-// máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
-#if defined(__aarch64__)
-#define inline_ __attribute__((always_inline))
+#ifdef _WIN32                                    // Windows
+#include <io.h>                                  // Para usar a função _access()
+#define F_OK 0                                    // Arquivo existe
+#define access _access                            // Para verificar se um arquivo existe
+#define limpar_ecra() system("cls")
 #else
-#define inline_ inline
-#endif // defined(__aarch64__)
+#define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"
+#define limpar_ecra() \
+        printf(ESCAPE_CODE_LIMPAR_CONSOLA)       // Definir uma macro para limpar o ecrã
+#include <unistd.h>                              // Para usar a função access()
+#endif // _WIN32            
 
-#if defined(_WIN32) || defined(_WIN34)            // Windows
-#include <io.h>                                 // Para usar a função _access()
-#define F_OK 0                                   // Arquivo existe
-#define access _access                           // Para verificar se um arquivo existe
-#else
-#include <unistd.h>                             // Para usar a função access()
-#endif // defined(_WIN32) || defined(_WIN34)
-
-/// MACROS ///
-#define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
-#define limpar_ecra() printf(ESCAPE_CODE_LIMPAR_CONSOLA)     // Definir uma macro para limpar o ecrã
-#define obter_timestamp() time(NULL)                         // Defini uma macro para obter uma timestamp
 
 // Ficheiros //
 #define FICHEIRO_SAVE "save.dat"         // Nome do ficheiro de save
@@ -200,15 +192,14 @@ void libertar_atividade(atividade_t*);
 void libertar_inscricao(inscricao_t*);
 void libertar_estado_programa(estado_programa_t*);
 
-// Usamos a keyword static para evitar o aviso de compilação "'printf' is static but used in inline function"
-inline_ static void mostrar_participante(participante_t*);
-inline_ static void mostrar_atividade(atividade_t*);
-inline_ static void mostrar_inscricao(inscricao_t*);
-inline_ static void mostrar_estado_programa(estado_programa_t*);
+void mostrar_participante(participante_t*);
+void mostrar_atividade(atividade_t*);
+void mostrar_inscricao(inscricao_t*);
+void mostrar_estado_programa(estado_programa_t*);
 
-inline_ static void mostrar_participantes(estado_programa_t*, bool_t);
-inline_ static void mostrar_atividades(estado_programa_t*, bool_t);
-inline_ static void mostrar_inscricoes(estado_programa_t*, bool_t);
+void mostrar_participantes(estado_programa_t*, bool_t);
+void mostrar_atividades(estado_programa_t*, bool_t);
+void mostrar_inscricoes(estado_programa_t*, bool_t);
 
 /* ========================================================== */
 
@@ -331,10 +322,10 @@ int   obter_hora_atual();
 int   obter_minuto_atual();
 
 bool_t ano_bissexto(int ano);
-inline_ int dias_mes(int mes, int ano);
+int dias_mes(int mes, int ano);
 
 int data_hora_para_timestamp(char* data, char* hora);
-inline_ int obter_timestamp_inscricao(inscricao_t*);
+int obter_timestamp_inscricao(inscricao_t*);
 
 /* ========================================================== */
 
@@ -369,7 +360,7 @@ int main() {
     // do programa.
     estado_programa_t* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes);
 
-    setlocale(LC_ALL, "Portuguese"); 
+    setlocale(LC_ALL, "Portuguese");
 
 #if TESTE
     inserir_dados_teste(estado_programa);
@@ -1227,9 +1218,9 @@ void libertar_estado_programa(estado_programa_t* estado_programa) {
 
 
 /// Liberta memória alocada para cada um dos componentes individuais dos vetores de dados
-inline_ void libertar_participante(participante_t* participante) {free(participante);}
-inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
-inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
+void libertar_participante(participante_t* participante) {free(participante);}
+void libertar_atividade(atividade_t* atividade) {free(atividade);}
+void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
 
 /* ========================================================== */
@@ -1242,7 +1233,7 @@ inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
  * @param estado_programa 
  * @return void
  */
-inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) {
+void mostrar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
     
     printf("Participantes:\n");
@@ -1262,7 +1253,7 @@ inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) 
 }
 
 // Mostra um participante individual
-inline_ static void mostrar_participante(participante_t* participante) {
+void mostrar_participante(participante_t* participante) {
     printf("    Identificador: %d\n", participante->identificador);
     printf("    Nome: %s\n", participante->nome);
     printf("    Escola: %s\n", participante->escola);
@@ -1272,7 +1263,7 @@ inline_ static void mostrar_participante(participante_t* participante) {
 }
 
 // Mostra uma atividade individual
-inline_ static void mostrar_atividade(atividade_t* atividade) {
+void mostrar_atividade(atividade_t* atividade) {
     printf("    Identificador: %d\n", atividade->identificador);
     printf("    Designação: %s\n", atividade->designacao);
     printf("    Data: %s\n", atividade->data);
@@ -1284,7 +1275,7 @@ inline_ static void mostrar_atividade(atividade_t* atividade) {
 }
 
 // Mostra uma inscricao individual
-inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
+void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
     printf("    ID da Atividade: %d\n", inscricao->id_atividade);
@@ -1300,9 +1291,9 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
  * 
  * @param estado_programa 
  * @param esperar_tecla_utilizador 
- * @return inline_ 
+ * @return void
  */
-inline_ static void mostrar_participantes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
+void mostrar_participantes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_participantes = *estado_programa->numero_de_participantes;
 
     limpar_ecra();
@@ -1321,7 +1312,7 @@ inline_ static void mostrar_participantes(estado_programa_t* estado_programa, bo
 }
 
 // Mostra todas as atividades
-inline_ static void mostrar_atividades(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
+void mostrar_atividades(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_atividades = *estado_programa->numero_de_atividades;
 
     if (numero_atividades == 0) {
@@ -1338,7 +1329,7 @@ inline_ static void mostrar_atividades(estado_programa_t* estado_programa, bool_
 }
 
 // Mostra todas as atividades
-inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
+void mostrar_inscricoes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_inscricoes = *estado_programa->numero_de_inscricoes;
 
     if (numero_inscricoes == 0) {
@@ -1596,7 +1587,7 @@ bool_t ano_bissexto(int ano) {
  * @param ano_bissexto 
  * @return int 
  */
-inline_ int dias_mes(int mes, int ano) {
+int dias_mes(int mes, int ano) {
     int dias[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     if (mes == 2 && ano_bissexto(ano)) dias[1] = 29;
@@ -1743,9 +1734,9 @@ bool_t hora_minuto_valido(int hora, int minuto) {
  * @param caractere 
  * @param string 
  * @param tamanho_string 
- * @return inline_ 
+ * @return int
  */
-inline_ int posicao_char_na_string(char caractere, char* string, int tamanho_string) {
+int posicao_char_na_string(char caractere, char* string, int tamanho_string) {
     int posicao = ERRO, indice;
 
     for (indice = 0; indice < tamanho_string; indice++) {
@@ -1961,6 +1952,9 @@ opcao_menu_participantes_t ler_opcao_menu_participantes() {
         printf("2. Listar Participantes\n");
         printf("3. Voltar\n");
         printf("Opcao: ");
+        fflush(stdin);
+        // Limpar o buffer de entrada devido a uma possivel falha quando o utilizador insere um novo
+        // participante, visto que o último campo é lido como uma string
         scanf("%d", &opcao);
 
         if (opcao < 1 || opcao > 3) {
@@ -2294,6 +2288,10 @@ void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t* estado_progr
     if (*estado_programa->numero_de_inscricoes == 0) printf("Não existem inscrições registadas.\n");
     else {
         ler_horizonte_temporal(data_inicio, hora_inicio, data_fim, hora_fim);
+
+        // Converter as datas e horas para timestamp
+        timestamp_inicio = data_hora_para_timestamp(data_inicio, hora_inicio);
+        timestamp_fim = data_hora_para_timestamp(data_fim, hora_fim);
         
         // Percorrer as inscrições e verificar se estão dentro do horizonte temporal, se estiverem, adicionar ao valor total
         for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
@@ -2347,6 +2345,6 @@ int data_hora_para_timestamp(char* data, char* hora) {
  * @param inscricao 
  * @return int 
  */
-inline_ int obter_timestamp_inscricao(inscricao_t* inscricao) {
+int obter_timestamp_inscricao(inscricao_t* inscricao) {
     return data_hora_para_timestamp(inscricao->data, inscricao->hora);
 }
