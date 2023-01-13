@@ -9,8 +9,6 @@
  * @copyright Copyright (c) 2022
  */
 
-// TODO: Adicionar mais opções de estatísticas ao programa. Por exemplo:
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -18,27 +16,18 @@
 #include <time.h>
 #include <locale.h>
 
-// A keyword "inline" parecia causar problemas com o GCC na minha
-// máquina arm64, então eu apenas redefino a constante aqui para um dos atributos do GCC
-#if defined(__aarch64__)
-#define inline_ __attribute__((always_inline))
+#ifdef _WIN32                                    // Windows
+#include <io.h>                                  // Para usar a função _access()
+#define F_OK 0                                    // Arquivo existe
+#define access _access                            // Para verificar se um arquivo existe
+#define limpar_ecra() system("cls")
 #else
-#define inline_ inline
-#endif // defined(__aarch64__)
+#define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"
+#define limpar_ecra() \
+        printf(ESCAPE_CODE_LIMPAR_CONSOLA)       // Definir uma macro para limpar o ecrã
+#include <unistd.h>                              // Para usar a função access()
+#endif // _WIN32            
 
-#if defined(_WIN32) || defined(_WIN34)            // Windows
-#include <io.h>                                 // Para usar a função _access()
-#define F_OK 0                                   // Arquivo existe
-#define access _access                           // Para verificar se um arquivo existe
-#else
-#include <unistd.h>                             // Para usar a função access()
-#endif // defined(_WIN32) || defined(_WIN34)
-
-/// MACROS ///
-#define ESCAPE_CODE_LIMPAR_CONSOLA "\033[H\033[J"            // ANSI escape code para limpar a consola para evitar system calls
-#define limpar_ecra() printf(ESCAPE_CODE_LIMPAR_CONSOLA)     // Definir uma macro para limpar o ecrã
-#define obter_timestamp() time(NULL)                         // Defini uma macro para obter uma timestamp
-#define TESTE 1                                              // Flag de teste
 
 // Ficheiros //
 #define FICHEIRO_SAVE "save.dat"         // Nome do ficheiro de save
@@ -58,7 +47,7 @@
 #define TAMANHO_MAXIMO_AE 10
 #define TAMANHO_DATA 11
 #define TAMANHO_HORA 6
-#define TAMANHO_TELEFONE 9
+#define TAMANHO_TELEFONE 10
 #define VALOR_MINIMO_ATIVIDADE 0
 #define VALOR_MAXIMO_ATIVIDADE 100
 
@@ -70,9 +59,8 @@
 
 
 /* ========================================================== */
-/* =                 UTILITÁRIOS DE OUTPUT                  = */
+/* =                  ENUMERAÇÔES E TIPOS                   = */
 /* ========================================================== */
-
 
 typedef enum {
     FALSE = 0,
@@ -130,13 +118,6 @@ typedef enum {                          // Menu de estatísticas
     VOLTAR_MENU_PRINCIPAL_ESTATISTICAS
 } opcao_menu_estatisticas_t;
 
-typedef enum {                          // Associacoes de estudantes
-    AE_ESTG = 1,
-    AE_ESECS,
-    AE_ESSLEI,
-    AE_ESAD,
-    AE_ESTM
-} associacao_estudantes_t;
 
 /* ========================================================== */
 /* =                      ESTRUTURAS                        = */
@@ -211,15 +192,14 @@ void libertar_atividade(atividade_t*);
 void libertar_inscricao(inscricao_t*);
 void libertar_estado_programa(estado_programa_t*);
 
-// Usamos a keyword static para evitar o aviso de compilação "'printf' is static but used in inline function"
-inline_ static void mostrar_participante(participante_t*);
-inline_ static void mostrar_atividade(atividade_t*);
-inline_ static void mostrar_inscricao(inscricao_t*);
-inline_ static void mostrar_estado_programa(estado_programa_t*);
+void mostrar_participante(participante_t*);
+void mostrar_atividade(atividade_t*);
+void mostrar_inscricao(inscricao_t*);
+void mostrar_estado_programa(estado_programa_t*);
 
-inline_ static void mostrar_participantes(estado_programa_t*, bool_t);
-inline_ static void mostrar_atividades(estado_programa_t*, bool_t);
-inline_ static void mostrar_inscricoes(estado_programa_t*, bool_t);
+void mostrar_participantes(estado_programa_t*, bool_t);
+void mostrar_atividades(estado_programa_t*, bool_t);
+void mostrar_inscricoes(estado_programa_t*, bool_t);
 
 /* ========================================================== */
 
@@ -287,7 +267,7 @@ int procurar_inscricao_por_id(int id, estado_programa_t*);
 
 /* ========================================================== */
 
-char* obter_hora_atual_string_string();
+char* obter_data_atual_string();
 char* obter_hora_atual_string();
 char* obter_hora_atual_string_com_segundos();
 
@@ -342,10 +322,10 @@ int   obter_hora_atual();
 int   obter_minuto_atual();
 
 bool_t ano_bissexto(int ano);
-inline_ int dias_mes(int mes, int ano);
+int dias_mes(int mes, int ano);
 
 int data_hora_para_timestamp(char* data, char* hora);
-inline_ int obter_timestamp_inscricao(inscricao_t*);
+int obter_timestamp_inscricao(inscricao_t*);
 
 /* ========================================================== */
 
@@ -380,13 +360,13 @@ int main() {
     // do programa.
     estado_programa_t* estado_programa = criar_estado_programa(participantes, atividades, inscricoes, &numero_de_participantes, &numero_de_atividades, &numero_de_inscricoes);
 
-    setlocale(LC_ALL, "Portuguese"); 
+    setlocale(LC_ALL, "Portuguese");
 
 #if TESTE
     inserir_dados_teste(estado_programa);
 #else
     if (carregar_dados(FICHEIRO_SAVE, estado_programa) == ERRO) {
-        printf("Erro ao carregar dados do ficheiro \"%s\". A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
+        printf("O ficheiro \"%s\" não foi encontrado. A aplicação irá continuar sem dados pré-existentes.\n", FICHEIRO_SAVE);
         esperar_tecla("Pressione qualquer tecla para continuar...");
     }
 #endif
@@ -428,6 +408,7 @@ int main() {
     } while(!sair);
 
     limpar_ecra();
+    libertar_estado_programa(estado_programa);
     return OK;
 }
 
@@ -795,6 +776,14 @@ int ler_nif(const char* mensagem) {
     return nif;
 }
 
+/**
+ * @brief Lê um número de telemóvel até que ele seja válido
+ * 
+ * O número de telemóvel deve ter 9 dígitos
+ * 
+ * @param mensagem 
+ * @return int 
+ */
 int ler_telefone(const char* mensagem) {
     char telefone[TAMANHO_TELEFONE];
 
@@ -807,6 +796,14 @@ int ler_telefone(const char* mensagem) {
     return atoi(telefone);
 }
 
+/**
+ * @brief Lê um email até que ele seja válido
+ * 
+ * O email tem que seguir as especificações para endereços eletrónicos especificadas nos respetivos RFCs
+ * 
+ * @param mensagem 
+ * @param output 
+ */
 void ler_email(const char* mensagem, char* output) {
     char email[TAMANHO_MAXIMO_EMAIL];
     
@@ -819,6 +816,16 @@ void ler_email(const char* mensagem, char* output) {
     strcpy(output, email);
 }
 
+/**
+ * @brief Lê um horizonte temporal até que este seja válido.
+ * 
+ * A data de fim não pode ser anterior à data de início.
+ * 
+ * @param data_inicial 
+ * @param hora_inicial 
+ * @param data_final 
+ * @param hora_final 
+ */
 void ler_horizonte_temporal(char* data_inicial, char* hora_inicial, char* data_final, char* hora_final) {
     int timestamp_inicial, timestamp_final;
 
@@ -839,6 +846,14 @@ void ler_horizonte_temporal(char* data_inicial, char* hora_inicial, char* data_f
     } while (timestamp_final < timestamp_inicial);
 }
 
+/**
+ * @brief Lê uma associação de estudantes até que esta seja válida
+ * 
+ * A associação inserida deve estar entre as AEs possíveis: AE-ESTG, AE-ESECS, AE-ESSLEI, AE-ESAD, AE-ESTM
+ * 
+ * @param mensagem 
+ * @param output 
+ */
 void ler_associacao_estudantes(const char* mensagem, char* output) {
     char associacao[TAMANHO_MAXIMO_AE];
     char* associacoes_possiveis[5] = {"AE-ESTG", "AE-ESECS", "AE-ESSLEI", "AE-ESAD", "AE-ESTM"};
@@ -854,6 +869,15 @@ void ler_associacao_estudantes(const char* mensagem, char* output) {
     strcpy(output, associacao);
 }
 
+/**
+ * @brief Lê o ID de um participante para a criação de uma inscrição
+ * 
+ * O participante precisa de existir
+ * 
+ * @param mensagem 
+ * @param estado_programa 
+ * @return int 
+ */
 int ler_id_participante(const char* mensagem, estado_programa_t* estado_programa) {
     int id_participante;
 
@@ -866,6 +890,15 @@ int ler_id_participante(const char* mensagem, estado_programa_t* estado_programa
     return id_participante;
 }
 
+/**
+ * @brief Lê o ID de uma atividade para a criação de uma inscrição
+ * 
+ * A atividade precisa de existir
+ * 
+ * @param mensagem 
+ * @param estado_programa 
+ * @return int 
+ */
 int ler_id_atividade(const char* mensagem, estado_programa_t* estado_programa) {
     int id_atividade;
 
@@ -878,6 +911,14 @@ int ler_id_atividade(const char* mensagem, estado_programa_t* estado_programa) {
     return id_atividade;
 }
 
+/**
+ * @brief Lê o tipo de atividade até que este seja válido
+ * 
+ * O tipo de atividade deve estar entre os tipos válidos: ACADEMICA, LAZER, CULTURA, DESPORTO, FORMACAO, OUTRA
+ * 
+ * @param mensagem 
+ * @param output 
+ */
 void ler_tipo_atividade(const char* mensagem, char* output) {
     char tipo[TAMANHO_MAXIMO_TIPO_ATIVIDADE];
     char* tipos_possiveis[6] = {"ACADEMICA", "LAZER", "CULTURA", "DESPORTO", "FORMACAO", "OUTRA"};
@@ -1123,7 +1164,7 @@ inscricao_t* criar_inscricao(int id_participante, int id_atividade, estado_progr
         inscricao->valor_pago = estado_programa->atividades[indice_procura_atividades]->valor;
 
         // A inscrição tem a data e hora da sua criação
-        strcpy(inscricao->data, obter_hora_atual_string_string());
+        strcpy(inscricao->data, obter_data_atual_string());
         strcpy(inscricao->hora, obter_hora_atual_string_com_segundos());
     }
 
@@ -1162,6 +1203,11 @@ estado_programa_t* criar_estado_programa(participante_t** vetor_participantes, a
 /* ========================================================== */
 
 
+/**
+ * @brief Liberta a memória alocada para o estado do programa
+ * 
+ * @param estado_programa 
+ */
 void libertar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
     for (indice= 0; indice < *estado_programa->numero_de_participantes; indice++) libertar_participante(estado_programa->participantes[indice]);
@@ -1171,16 +1217,23 @@ void libertar_estado_programa(estado_programa_t* estado_programa) {
 }
 
 
-inline_ void libertar_participante(participante_t* participante) {free(participante);}
-inline_ void libertar_atividade(atividade_t* atividade) {free(atividade);}
-inline_ void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
+/// Liberta memória alocada para cada um dos componentes individuais dos vetores de dados
+void libertar_participante(participante_t* participante) {free(participante);}
+void libertar_atividade(atividade_t* atividade) {free(atividade);}
+void libertar_inscricao(inscricao_t* inscricao) {free(inscricao);}
 
 
 /* ========================================================== */
 /* =                 UTILITÁRIOS DE OUTPUT                  = */
 /* ========================================================== */
 
-inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) {
+/**
+ * @brief Mostra o estado completo do programa
+ * 
+ * @param estado_programa 
+ * @return void
+ */
+void mostrar_estado_programa(estado_programa_t* estado_programa) {
     int indice;
     
     printf("Participantes:\n");
@@ -1199,7 +1252,8 @@ inline_ static void mostrar_estado_programa(estado_programa_t* estado_programa) 
     printf("Número de inscrições: %d (%d restantes)\n", *estado_programa->numero_de_inscricoes, NUMERO_MAXIMO_DE_INSCRICOES - *estado_programa->numero_de_inscricoes);
 }
 
-inline_ static void mostrar_participante(participante_t* participante) {
+// Mostra um participante individual
+void mostrar_participante(participante_t* participante) {
     printf("    Identificador: %d\n", participante->identificador);
     printf("    Nome: %s\n", participante->nome);
     printf("    Escola: %s\n", participante->escola);
@@ -1208,7 +1262,8 @@ inline_ static void mostrar_participante(participante_t* participante) {
     printf("    Telefone: %d\n\n", participante->telefone);
 }
 
-inline_ static void mostrar_atividade(atividade_t* atividade) {
+// Mostra uma atividade individual
+void mostrar_atividade(atividade_t* atividade) {
     printf("    Identificador: %d\n", atividade->identificador);
     printf("    Designação: %s\n", atividade->designacao);
     printf("    Data: %s\n", atividade->data);
@@ -1219,7 +1274,8 @@ inline_ static void mostrar_atividade(atividade_t* atividade) {
     printf("    Valor: %.2f\n", atividade->valor);
 }
 
-inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
+// Mostra uma inscricao individual
+void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Identificador: %d\n", inscricao->identificador);
     printf("    ID do Participante: %d\n", inscricao->id_participante);
     printf("    ID da Atividade: %d\n", inscricao->id_atividade);
@@ -1228,7 +1284,16 @@ inline_ static void mostrar_inscricao(inscricao_t* inscricao) {
     printf("    Hora: %s\n", inscricao->hora);
 }
 
-inline_ static void mostrar_participantes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
+/**
+ * @brief Mostra todos os participantes no vetor
+ * 
+ * Mostra uma mensagem de aviso se não existir nenhum participante
+ * 
+ * @param estado_programa 
+ * @param esperar_tecla_utilizador 
+ * @return void
+ */
+void mostrar_participantes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_participantes = *estado_programa->numero_de_participantes;
 
     limpar_ecra();
@@ -1246,7 +1311,8 @@ inline_ static void mostrar_participantes(estado_programa_t* estado_programa, bo
     if (esperar_tecla_utilizador) esperar_tecla("Pressione ENTER para continuar...");
 }
 
-inline_ static void mostrar_atividades(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
+// Mostra todas as atividades
+void mostrar_atividades(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_atividades = *estado_programa->numero_de_atividades;
 
     if (numero_atividades == 0) {
@@ -1262,7 +1328,8 @@ inline_ static void mostrar_atividades(estado_programa_t* estado_programa, bool_
     if (esperar_tecla_utilizador) esperar_tecla("Pressione ENTER para continuar...");
 }
 
-inline_ static void mostrar_inscricoes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
+// Mostra todas as atividades
+void mostrar_inscricoes(estado_programa_t* estado_programa, bool_t esperar_tecla_utilizador) {
     int indice, numero_inscricoes = *estado_programa->numero_de_inscricoes;
 
     if (numero_inscricoes == 0) {
@@ -1520,7 +1587,7 @@ bool_t ano_bissexto(int ano) {
  * @param ano_bissexto 
  * @return int 
  */
-inline_ int dias_mes(int mes, int ano) {
+int dias_mes(int mes, int ano) {
     int dias[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     if (mes == 2 && ano_bissexto(ano)) dias[1] = 29;
@@ -1634,6 +1701,15 @@ bool_t hora_valida(char* hora, char* data_inserida, bool_t autorizar_hora_passad
 }
 
 
+/**
+ * @brief Valida a hora e o minuto inseridos
+ * 
+ * A hora deve estar entre 0 e 23 e o minuto entre 0 e 59
+ * 
+ * @param hora 
+ * @param minuto 
+ * @return bool_t 
+ */
 bool_t hora_minuto_valido(int hora, int minuto) {
     bool_t valido = TRUE;
 
@@ -1658,9 +1734,9 @@ bool_t hora_minuto_valido(int hora, int minuto) {
  * @param caractere 
  * @param string 
  * @param tamanho_string 
- * @return inline_ 
+ * @return int
  */
-inline_ int posicao_char_na_string(char caractere, char* string, int tamanho_string) {
+int posicao_char_na_string(char caractere, char* string, int tamanho_string) {
     int posicao = ERRO, indice;
 
     for (indice = 0; indice < tamanho_string; indice++) {
@@ -1681,7 +1757,7 @@ inline_ int posicao_char_na_string(char caractere, char* string, int tamanho_str
  * @brief Função que retorna a data atual no formato definido na constante DATA_FORMATO
  * @return
  */
-char* obter_hora_atual_string_string() {
+char* obter_data_atual_string() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     char* data_atual = (char*) malloc(sizeof(char) * 11);
@@ -1701,30 +1777,35 @@ char* obter_hora_atual_string_com_segundos() {
     return hora_atual;
 }
 
+// Retorna o ano atual
 int obter_ano_atual() {
     time_t tempo = time(NULL);
     struct tm* data = localtime(&tempo);
     return data->tm_year + 1900;
 }
 
+// Retorna o mes atual
 int obter_mes_atual() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     return tm.tm_mon + 1;
 }
 
+// Retorna o dia atual
 int obter_dia_atual() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     return tm.tm_mday;
 }
 
+// Retorna a hora atual
 int obter_hora_atual() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     return tm.tm_hour;
 }
 
+// Retorna o minuto atual
 int obter_minuto_atual() {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
@@ -1733,18 +1814,25 @@ int obter_minuto_atual() {
 
 /* ========================================================== */
 
+// Converte uma string para minusculas
 void string_para_minusculas(char* string) {
     int indice;
     for (indice = 0; indice < strlen(string); indice++)
         string[indice] = tolower(string[indice]);
 }
 
+// Converte uma string para maiusculas
 void string_para_maiusculas(char* string) {
     int indice;
     for (indice = 0; indice < strlen(string); indice++)
         string[indice] = toupper(string[indice]);
 }
 
+/**
+ * @brief Espera que o utilizador prima uma tecla e mostra uma mensagem opcional
+ * 
+ * @param mensagem 
+ */
 void esperar_tecla(const char* mensagem) {
     if (mensagem != NULL) printf("%s", mensagem);
     fflush(stdin);
@@ -1762,6 +1850,15 @@ void esperar_tecla(const char* mensagem) {
 // A utilizacao de early returns iria facilitar a implementacao, porem nao sao permitidos
 // de acordo com as recomendações do docente
 
+/**
+ * @brief Procura um participante por id
+ * 
+ * Devolve o indice do participante se encontrado, ou ERRO caso contrario
+ * 
+ * @param id 
+ * @param estado_programa 
+ * @return int 
+ */
 int procurar_participante_por_id(int id, estado_programa_t* estado_programa) {
     int indice;
     bool_t encontrado = FALSE;      
@@ -1776,6 +1873,7 @@ int procurar_participante_por_id(int id, estado_programa_t* estado_programa) {
     return encontrado ? indice : ERRO;
 }
 
+// Procura uma atividade por id
 int procurar_atividade_por_id(int id, estado_programa_t* estado_programa) {
     int indice;
     bool_t encontrado = FALSE;
@@ -1790,6 +1888,7 @@ int procurar_atividade_por_id(int id, estado_programa_t* estado_programa) {
     return encontrado ? indice : ERRO;
 }
 
+// Procura uma inscricao por id
 int procurar_inscricao_por_id(int id, estado_programa_t* estado_programa) {
     int indice;
     bool_t encontrado = FALSE;
@@ -1853,6 +1952,9 @@ opcao_menu_participantes_t ler_opcao_menu_participantes() {
         printf("2. Listar Participantes\n");
         printf("3. Voltar\n");
         printf("Opcao: ");
+        fflush(stdin);
+        // Limpar o buffer de entrada devido a uma possivel falha quando o utilizador insere um novo
+        // participante, visto que o último campo é lido como uma string
         scanf("%d", &opcao);
 
         if (opcao < 1 || opcao > 3) {
@@ -2010,6 +2112,11 @@ void menu_inscricoes(estado_programa_t* estado_programa) {
     } while (opcao != VOLTAR_MENU_PRINCIPAL_INSCRICOES);
 }
 
+/**
+ * @brief Funcao que orquestra a chamada de funções para o menu de estatisticas
+ * 
+ * @param estado_programa 
+ */
 void menu_estatisticas(estado_programa_t* estado_programa) {
     opcao_menu_estatisticas_t opcao;
 
@@ -2181,6 +2288,10 @@ void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t* estado_progr
     if (*estado_programa->numero_de_inscricoes == 0) printf("Não existem inscrições registadas.\n");
     else {
         ler_horizonte_temporal(data_inicio, hora_inicio, data_fim, hora_fim);
+
+        // Converter as datas e horas para timestamp
+        timestamp_inicio = data_hora_para_timestamp(data_inicio, hora_inicio);
+        timestamp_fim = data_hora_para_timestamp(data_fim, hora_fim);
         
         // Percorrer as inscrições e verificar se estão dentro do horizonte temporal, se estiverem, adicionar ao valor total
         for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
@@ -2234,6 +2345,6 @@ int data_hora_para_timestamp(char* data, char* hora) {
  * @param inscricao 
  * @return int 
  */
-inline_ int obter_timestamp_inscricao(inscricao_t* inscricao) {
+int obter_timestamp_inscricao(inscricao_t* inscricao) {
     return data_hora_para_timestamp(inscricao->data, inscricao->hora);
 }
