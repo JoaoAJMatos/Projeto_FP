@@ -1537,17 +1537,15 @@ bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arrob
     else {
         if (mail[0] == '.' || mail[tamanho_parte_local - 1] == '.') valido = FALSE; // O '.' não pode ser o primeiro ou último caractere da parte local do email
         else {
-            // O '.' não pode ser seguido de outro '.'
-            if (vetor_contem_elemento(mail, tamanho_parte_local, &ponto, CHAR)) {
-                if (vetor_contem_elemento(mail + 1, tamanho_parte_local - 1, &ponto, CHAR)) valido = FALSE; 
-            } else
+            // Não pode haver dois pontos seguidos
+            for (indice = 0; indice < tamanho_parte_local - 1; indice++)
+                if (mail[indice] == ponto && mail[indice + 1] == ponto) valido = FALSE;
+            
+            if (valido)
+                // Verifica se todos os caracteres da parte local do email são válidos
                 for (indice = 0; indice < tamanho_parte_local; indice++) {
                     auxiliar = mail[indice];
-                    if (!vetor_contem_elemento(caracteres_validos_parte_local, strlen(caracteres_validos_parte_local), &auxiliar, CHAR))
-                    {
-                        valido = FALSE;
-                        break;
-                    }
+                    if (!vetor_contem_elemento(caracteres_validos_parte_local, strlen(caracteres_validos_parte_local), &auxiliar, CHAR)) valido = FALSE;
                 }
         }
     }
