@@ -657,10 +657,13 @@ codigo_erro_t carregar_dados(const char* caminho, estado_programa_t* estado_prog
  * @return void
  */
 void ler_string(const char* mensagem, char* string, int tamanho) {
-    printf("%s", mensagem);
-    fflush(stdin);
-    fgets(string, tamanho, stdin);
-    string[strcspn(string, "\n")] = '\0'; // Remover o '\n' do final da string
+    do {
+        printf("%s", mensagem);
+        fflush(stdin);
+        fgets(string, tamanho, stdin);
+        string[strcspn(string, "\n")] = '\0'; // Remover o '\n' do final da string
+        if (strlen(string) == 0) printf("A string não pode estar vazia.\n");
+    } while (strlen(string) == 0);
 }
 
 
