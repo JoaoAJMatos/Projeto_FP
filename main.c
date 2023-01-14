@@ -1529,9 +1529,9 @@ bool_t email_valido(char* mail) {
  */
 bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arroba) {
     bool_t valido = TRUE;
-    int tamanho_parte_local = posicao_arroba;
+    int tamanho_parte_local = posicao_arroba, indice;
     char caracteres_validos_parte_local[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'*+-/=?^_`{|}~.*";
-    char ponto = '.';
+    char ponto = '.', auxiliar;
 
     if (tamanho_parte_local < 1 || tamanho_parte_local > 64) valido = FALSE;        // A parte local do email deve ter entre 1 e 64 caracteres
     else {
@@ -1540,10 +1540,15 @@ bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arrob
             // O '.' não pode ser seguido de outro '.'
             if (vetor_contem_elemento(mail, tamanho_parte_local, &ponto, CHAR)) {
                 if (vetor_contem_elemento(mail + 1, tamanho_parte_local - 1, &ponto, CHAR)) valido = FALSE; 
-            } else {
-                // Verifica se a parte local do email contem apenas caracteres válidos
-                if (!vetor_contem_elemento(mail, tamanho_parte_local, caracteres_validos_parte_local, CHAR)) valido = FALSE;
-            }
+            } else
+                for (indice = 0; indice < tamanho_parte_local; indice++) {
+                    auxiliar = mail[indice];
+                    if (!vetor_contem_elemento(caracteres_validos_parte_local, strlen(caracteres_validos_parte_local), &auxiliar, CHAR))
+                    {
+                        valido = FALSE;
+                        break;
+                    }
+                }
         }
     }
 
@@ -1560,28 +1565,28 @@ bool_t email_parte_local_valida(char* mail, int tamanho_email, int posicao_arrob
  */
 bool_t email_parte_dominio_valida(char* email, int tamanho_email, int posicao_arroba) {
     bool_t valido = TRUE;
-    int tamanho_parte_dominio = tamanho_email - posicao_arroba - 1;
+    int tamanho_parte_dominio = tamanho_email - posicao_arroba - 1, indice;
     char caracteres_validos_parte_dominio[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.";
-    char ponto = '.';
+    char ponto = '.', auxiliar;
 
     if (tamanho_parte_dominio < 1 || tamanho_parte_dominio > 255) valido = FALSE; // A parte do domínio do email deve ter entre 1 e 255 caracteres
     else {
-        // Verifica se a parte do domínio do email contem apenas caracteres válidos
-        if (!vetor_contem_elemento(email + posicao_arroba + 1, tamanho_parte_dominio, caracteres_validos_parte_dominio, CHAR)) valido = FALSE;
+        // Verifica se a parte do domínio do email tem pelo menos um ponto
+        if (!vetor_contem_elemento(email + posicao_arroba + 1, tamanho_parte_dominio, &ponto, CHAR)) valido = FALSE;
         else {
-            // Verifica se a parte do domínio do email tem pelo menos um ponto
-            if (!vetor_contem_elemento(email + posicao_arroba + 1, tamanho_parte_dominio, &ponto, CHAR)) valido = FALSE;
+            // Verifica se a parte do domínio do email tem pelo menos um label com pelo menos 2 caracteres
+            if (!vetor_contem_elemento(email + posicao_arroba + 2, tamanho_parte_dominio - 1, &ponto, CHAR)) valido = FALSE;
             else {
-                // Verifica se a parte do domínio do email tem pelo menos um label com pelo menos 2 caracteres
-                if (!vetor_contem_elemento(email + posicao_arroba + 2, tamanho_parte_dominio - 1, &ponto, CHAR)) valido = FALSE;
-                else {
-                    // Verifica se a parte do domínio do email não tem um ponto no início ou no fim
-                    if (email[posicao_arroba + 1] == '.' || email[tamanho_email - 1] == '.') valido = FALSE;
-                }
+                // Verifica se a parte do domínio do email não tem um ponto no início ou no fim
+                if (email[posicao_arroba + 1] == '.' || email[tamanho_email - 1] == '.') valido = FALSE;
+                else
+                    for (indice = 0; indice < tamanho_parte_dominio; indice++) {
+                        auxiliar = email[posicao_arroba + 1 + indice];
+                        if (!vetor_contem_elemento(caracteres_validos_parte_dominio, strlen(caracteres_validos_parte_dominio), &auxiliar, CHAR)) valido = FALSE;
+                    }
             }
         }
     }
-
     return valido;
 }
 
