@@ -333,6 +333,7 @@ int obter_timestamp_inscricao(inscricao_t*);
 void mostrar_numero_atividades_por_ae(estado_programa_t*);
 void mostrar_percentagem_inscricoes_por_escola(estado_programa_t*);
 void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t*);
+void mostrar_vetor_valores_totais(float* vetor_valores_totais);
 
 
 
@@ -2303,6 +2304,16 @@ void mostrar_percentagem_inscricoes_por_escola(estado_programa_t* estado_program
     esperar_tecla("Pressione qualquer tecla para continuar...");
 }
 
+void mostrar_vetor_valores_totais(float* vetor_valores_totais) {
+    printf("Valor angariado por tipo de atividade:\n");
+    printf("Academica: %.2f\n", vetor_valores_totais[0]);
+    printf("Lazer: %.2f\n", vetor_valores_totais[1]);
+    printf("Cultura: %.2f\n", vetor_valores_totais[2]);
+    printf("Desporto: %.2f\n", vetor_valores_totais[3]);
+    printf("Formacao: %.2f\n", vetor_valores_totais[4]);
+    esperar_tecla("Pressione qualquer tecla para continuar...");
+}
+
 /**
  * @brief Mostra o valor angariado de todas as inscrições efetuadas dentro de um horizonte temporal
  * 
@@ -2310,7 +2321,9 @@ void mostrar_percentagem_inscricoes_por_escola(estado_programa_t* estado_program
  */
 void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t* estado_programa) {
     char data_inicio[TAMANHO_DATA], data_fim[TAMANHO_DATA], hora_inicio[TAMANHO_HORA], hora_fim[TAMANHO_HORA];
-    int timestamp_inicio, timestamp_fim, timestamp_inscricao, indice;
+    int timestamp_inicio, timestamp_fim, timestamp_inscricao, indice, indice_tipo;
+    char* tipos_possiveis[6] = {"ACADEMICA", "LAZER", "CULTURA", "DESPORTO", "FORMACAO", "OUTRA"};
+    float vetor_valores_totais[5] = {0, 0, 0, 0, 0};
     float valor_total = 0;
 
     limpar_ecra();
@@ -2326,11 +2339,15 @@ void mostrar_valor_inscricoes_horizonte_temporal(estado_programa_t* estado_progr
         for (indice = 0; indice < *estado_programa->numero_de_inscricoes; indice++) {
             timestamp_inscricao = obter_timestamp_inscricao(estado_programa->inscricoes[indice]);
             if (timestamp_inscricao >= timestamp_inicio && timestamp_inscricao <= timestamp_fim)
+                for (indice_tipo = 0; indice_tipo < 5; indice_tipo++)
+                    if (strcmp(estado_programa->atividades[indice]->tipo, tipos_possiveis[indice_tipo]) == OK)
+                        vetor_valores_totais[indice_tipo] += estado_programa->inscricoes[indice]->valor_pago;
+
                 valor_total += estado_programa->inscricoes[indice]->valor_pago;
             }
         printf("\nValor total das inscrições entre %s (às %s) e %s (às %s): %.2f\n", data_inicio, hora_inicio, data_fim, hora_fim, valor_total);
+        mostrar_vetor_valores_totais(vetor_valores_totais);
     }
-    esperar_tecla("Pressione qualquer tecla para continuar...");
 }
 
 /* ========================================================== */
